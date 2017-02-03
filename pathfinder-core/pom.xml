@@ -1,0 +1,32 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.unipg</groupId>
+    <artifactId>pathfinder</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+  <artifactId>pathfinder-core</artifactId>
+  <name>Pathfinder core classes</name>
+  <dependencies>
+  	<dependency>
+  		<groupId>org.apache.giraph</groupId>
+  		<artifactId>giraph-core</artifactId>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.apache.hadoop</groupId>
+  		<artifactId>hadoop-mapreduce-client-core</artifactId>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.unipg</groupId>
+  		<artifactId>pathfinder-common</artifactId>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.apache.giraph</groupId>
+  		<artifactId>giraph-block-app</artifactId>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.unipg</groupId>
+  		<artifactId>pathfinder-utils</artifactId>
+  	</dependency>
+  </dependencies>
+</project>
