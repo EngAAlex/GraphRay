@@ -46,6 +46,13 @@ public class PathfinderVertexID extends LongWritable {
 		return layer;
 	}
 	
+	/**
+	 * 
+	 */
+	public PathfinderVertexID copy() {
+		return new PathfinderVertexID(get(), layer);
+	}
+	
 	/* (non-Javadoc)
 	 * @see org.apache.hadoop.io.LongWritable#readFields(java.io.DataInput)
 	 */

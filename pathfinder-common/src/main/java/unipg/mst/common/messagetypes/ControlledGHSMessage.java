@@ -8,19 +8,23 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.Writable;
 
 /**
  * @author spark
  *
  */
-public class ControlledGHSMessage extends DoubleWritable {
+public class ControlledGHSMessage extends DoubleWritable{
 	
 	long senderID;
 	long fragmentID;
 	short status;
-	int startingDepth;
+//	int startingDepth;
 	
+	public static final short LEAF_DISCOVERY = 10;
+	public static final short DEPTH_1_DISCOVERY = 11;
+	public static final short MIS_MESSAGE = 12;
+	
+	public static final short LOEs_DEPLETED = 4;
 	public static final short CONNECT_MESSAGE = 3;	
 	public static final short REPORT_MESSAGE = 3;
 	public static final short ACCEPT_MESSAGE = 2;
@@ -41,7 +45,7 @@ public class ControlledGHSMessage extends DoubleWritable {
 	}
 	
 	public ControlledGHSMessage(long senderID, double value, short status){
-		super(value);
+		super(value);		
 		this.senderID = senderID;
 		this.status = status;
 	}
@@ -60,10 +64,10 @@ public class ControlledGHSMessage extends DoubleWritable {
 		this.fragmentID = fragmentID;
 	}	
 	
-	public ControlledGHSMessage(long senderID,  long fragmentID, int startingDepth, short status){
-		this(senderID, fragmentID, status);
-		this.startingDepth = startingDepth;
-	}
+//	public ControlledGHSMessage(long senderID,  long fragmentID, int startingDepth, short status){
+//		this(senderID, fragmentID, status);
+//		this.startingDepth = startingDepth;
+//	}
 	
 		/**
 	 * @return the senderID
@@ -79,19 +83,19 @@ public class ControlledGHSMessage extends DoubleWritable {
 		return status;
 	}
 
-	/**
-	 * @return the startingDepth
-	 */
-	public int getDepth() {
-		return startingDepth;
-	}
-
-	/**
-	 * @param startingDepth the startingDepth to set
-	 */
-	public void setDepth(int startingDepth) {
-		this.startingDepth = startingDepth;
-	}
+//	/**
+//	 * @return the startingDepth
+//	 */
+//	public int getDepth() {
+//		return startingDepth;
+//	}
+//
+//	/**
+//	 * @param startingDepth the startingDepth to set
+//	 */
+//	public void setDepth(int startingDepth) {
+//		this.startingDepth = startingDepth;
+//	}
 
 	/**
 	 * @return the fragmentID
@@ -108,7 +112,6 @@ public class ControlledGHSMessage extends DoubleWritable {
 		senderID = in.readLong();
 		fragmentID = in.readLong();
 		status = in.readShort();
-		startingDepth = in.readInt();
 	}
 
 	/* (non-Javadoc)
@@ -119,7 +122,6 @@ public class ControlledGHSMessage extends DoubleWritable {
 		out.writeLong(senderID);
 		out.writeLong(fragmentID);
 		out.writeShort(status);
-		out.writeInt(startingDepth);
 	}
 
 }

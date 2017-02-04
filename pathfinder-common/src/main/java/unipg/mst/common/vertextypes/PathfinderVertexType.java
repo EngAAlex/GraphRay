@@ -8,21 +8,22 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.io.BooleanWritable;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Writable;
 
 /**
  * @author spark
  *
  */
-public class PathfinderVertexType extends BooleanWritable {
+public class PathfinderVertexType extends DoubleWritable { //MISValue
 
 	protected boolean isRoot;
 	protected long fragmentIdentity;
 	protected double loeValue;
 	protected long loeDestination;
-	protected int depth;
+	protected int branches;
+	protected byte depth;
 	protected boolean loesDepleted;
-	
 	
 	/**
 	 * 
@@ -30,7 +31,8 @@ public class PathfinderVertexType extends BooleanWritable {
 	public PathfinderVertexType() {
 		super();
 		isRoot = true;
-		depth = 0;
+		depth = -1;
+		branches = 0;
 		loeValue = Double.MAX_VALUE;
 	}
 	
@@ -53,15 +55,15 @@ public class PathfinderVertexType extends BooleanWritable {
 	/**
 	 * @return
 	 */
-	public boolean isPartOfMIS(){
+	public double getMISValue(){
 		return super.get();
 	}
 	
 	/**
 	 * 
 	 */
-	public void resetMIS(){
-		super.set(false);
+	public void setMISValue(double value){
+		super.set(value);
 	}
 
 	/**
@@ -74,8 +76,12 @@ public class PathfinderVertexType extends BooleanWritable {
 	/**
 	 * @param depth the depth to set
 	 */
-	public void setDepth(int depth) {
+	public void setDepth(byte depth) {
 		this.depth = depth;
+	}
+	
+	public void resetDepth(){
+		depth = -1;
 	}
 
 	/**
@@ -111,7 +117,17 @@ public class PathfinderVertexType extends BooleanWritable {
 		return loeDestination;
 	}
 
-
+	public void addBranch(){
+		branches++;
+	}
+	
+	public boolean isLeaf(){
+		return branches == 1;
+	}
+	
+	public boolean isIsolated(){
+		return branches == 0;
+	}
 
 	/**
 	 * @return the edgeToRoot
@@ -125,8 +141,8 @@ public class PathfinderVertexType extends BooleanWritable {
 	/**
 	 * @param edgeToRoot the edgeToRoot to set
 	 */
-	public void setFragmentIdentity(long edgeToRoot) {
-		this.fragmentIdentity = edgeToRoot;
+	public void setFragmentIdentity(long fragmentIdentity) {
+		this.fragmentIdentity = fragmentIdentity;
 	}
 
 
@@ -164,7 +180,7 @@ public class PathfinderVertexType extends BooleanWritable {
 	public void readFields(DataInput in) throws IOException {
 		super.readFields(in);
 		isRoot = in.readBoolean();
-		depth = in.readInt();
+		depth = in.readByte();
 		loeValue = in.readDouble();
 		loeDestination = in.readLong();
 	}
@@ -175,7 +191,7 @@ public class PathfinderVertexType extends BooleanWritable {
 	public void write(DataOutput out) throws IOException {
 		super.write(out);
 		out.writeBoolean(isRoot);
-		out.writeInt(depth);
+		out.writeByte(depth);
 		out.writeDouble(loeValue);
 		out.writeLong(loeDestination);
 	}

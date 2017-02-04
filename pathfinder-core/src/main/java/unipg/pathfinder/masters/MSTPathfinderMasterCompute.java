@@ -3,6 +3,7 @@
  */
 package unipg.pathfinder.masters;
 
+import org.apache.giraph.aggregators.BooleanAndAggregator;
 import org.apache.giraph.master.DefaultMasterCompute;
 
 /**
@@ -11,6 +12,7 @@ import org.apache.giraph.master.DefaultMasterCompute;
  */
 public class MSTPathfinderMasterCompute extends DefaultMasterCompute {
 
+	public static final String procedureCompletedAggregator = "AGG_COMPLETE_GHS";
 	public static final String controllerGHSExecution = "CONTROLLED_GHS";
 	
 	/* (non-Javadoc)
@@ -27,8 +29,7 @@ public class MSTPathfinderMasterCompute extends DefaultMasterCompute {
 	 */
 	@Override
 	public void initialize() throws InstantiationException, IllegalAccessException {
-		// TODO Auto-generated method stub
-
+		registerAggregator(procedureCompletedAggregator, BooleanAndAggregator.class);
 	}
 
 }

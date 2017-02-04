@@ -6,23 +6,22 @@ package unipg.pathfinder.mst.blocks;
 import java.util.HashSet;
 import java.util.Iterator;
 
-import org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
 import org.apache.giraph.block_app.framework.piece.Piece;
-import org.apache.giraph.block_app.framework.piece.interfaces.VertexReceiver;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexSender;
-import org.apache.giraph.block_app.library.Pieces;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.function.vertex.ConsumerWithVertex;
 import org.apache.giraph.function.vertex.SupplierFromVertex;
+import org.apache.hadoop.io.BooleanWritable;
 
 import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.messagetypes.ControlledGHSMessage;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
+import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
 
 public class ControlledGHSPieces{
-
+	
 	/**
 	 * @author spark
 	 *
@@ -54,7 +53,6 @@ public class ControlledGHSPieces{
 				if(vertexValue.getLOE() == Double.MAX_VALUE){
 					Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();
 					double min = Double.MAX_VALUE;
-					PathfinderVertexType pvt = vertex.getValue();
 					HashSet<PathfinderVertexID> pathfinderCandidates = new HashSet<PathfinderVertexID>();
 					while(edges.hasNext()){
 						Edge<PathfinderVertexID, PathfinderEdgeType> current = edges.next();
@@ -73,7 +71,6 @@ public class ControlledGHSPieces{
 					}
 					if(min == Double.MAX_VALUE){
 						vertexValue.loesDepleted();
-						return null;
 					}
 					for(PathfinderVertexID pfid : pathfinderCandidates)
 						vertex.getEdgeValue(pfid).setAsPathfinderCandidate();
@@ -106,7 +103,7 @@ public class ControlledGHSPieces{
 					long currentSenderID = currentMessage.getSenderID();
 					long currentFragment = currentMessage.getFragmentID();
 					short currentMessageCode = currentMessage.getStatus();
-					int msgDepth = currentMessage.getDepth();
+//					int msgDepth = currentMessage.getDepth();
 					if(currentMessageCode == ControlledGHSMessage.TEST_MESSAGE){ 
 						if(myFragment != currentFragment){ //connection accepted
 							workerApi.sendMessage(new PathfinderVertexID(currentSenderID, vertexId.getLayer()), 
@@ -129,10 +126,13 @@ public class ControlledGHSPieces{
 			return(vertex, messages) -> {
 				PathfinderVertexID vertexId = vertex.getId();
 				PathfinderVertexType vertexValue = vertex.getValue();
+				if(vertexValue.hasLoesDepleted() && !vertexValue.isRoot()){					
+					workerApi.sendMessage(new PathfinderVertexID(vertexValue.getFragmentIdentity(), vertexId.getLayer()), new ControlledGHSMessage(vertex.getId().get(), ControlledGHSMessage.LOEs_DEPLETED));
+					return;
+				}
 				Iterator<ControlledGHSMessage> msgs = messages.iterator();
 				while(msgs.hasNext()){
 					ControlledGHSMessage currentMessage = msgs.next();
-					long currentSenderID = currentMessage.getSenderID();
 					long currentFragment = currentMessage.getFragmentID();
 					short currentMessageCode = currentMessage.getStatus();
 					switch(currentMessageCode){
@@ -149,43 +149,66 @@ public class ControlledGHSPieces{
 			};		
 		}
 
-		public static class LOEConnection extends Piece<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage, Object>{
-
-			public ConsumerWithVertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, Iterable<ControlledGHSMessage>> getLOESurveyVertexConsumer(
-					BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerApi) {
+		public static class LOEChoiceAndConnection extends Piece<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage, Object>{
+			
+			public ConsumerWithVertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, Iterable<ControlledGHSMessage>> getLOEChoiceVertexConsumer(
+					BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerApi){
 				return (vertex, messages) -> {
-					PathfinderVertexID vertexId = vertex.getId();
 					PathfinderVertexType vertexValue = vertex.getValue();
+					if(!vertexValue.isRoot()) //only roots will react now, and I'm sure only them will have messages incoming
+						return;
+					PathfinderVertexID vertexId = vertex.getId();
 					Iterator<ControlledGHSMessage> msgs = messages.iterator();
-					long minLOEDestination = -1;
-					double minLOE = Double.MAX_VALUE;
+					long minLOEDestination = vertexValue.getLoeDestination();
+					double minLOE = vertexValue.getLOE();
 					while(msgs.hasNext()){
 						ControlledGHSMessage currentMessage = msgs.next();
+						short currentStatus = currentMessage.getStatus();
+						if(currentStatus == ControlledGHSMessage.LOEs_DEPLETED)
+							continue;
 						long currentSenderID = currentMessage.getSenderID();
-//						long currentFragment = currentMessage.getFragmentID();
-//						short currentMessageCode = currentMessage.getStatus();	
 						double currentValue = currentMessage.get();
 						if(currentValue < minLOE){
 							minLOE = currentValue;
 							minLOEDestination = currentSenderID;
 						}
-					}									
-					
-					TO-DO ENDING CLAUSE;
-					
-					if(minLOE == Double.MAX_VALUE && vertexValue.hasLoesDepleted())
-						return; //ENDING CLAUSE
-					
-					if(vertexValue.getLOE() < minLOE){
-						vertex.getEdgeValue(new PathfinderVertexID(vertexValue.getLoeDestination(), vertexId.getLayer())).setAsBranchEdge();
-					}								
-					
-					workerApi.sendMessage(new PathfinderVertexID(vertexValue.getLoeDestination(), vertexId.getLayer()), new ControlledGHSMessage(vertexId.get(), ControlledGHSMessage.CONNECT_MESSAGE));
+					}
+					if(minLOE != Double.MAX_VALUE){
+						workerApi.sendMessage(new PathfinderVertexID(minLOEDestination, vertexId.getLayer()), new ControlledGHSMessage(vertexId.get(), vertexValue.getFragmentIdentity(), ControlledGHSMessage.CONNECT_MESSAGE));
+						workerApi.aggregate(MSTPathfinderMasterCompute.procedureCompletedAggregator, new BooleanWritable(false));
+					}
 				};
 			}
-
+			
+			public ConsumerWithVertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, Iterable<ControlledGHSMessage>> getConnectReplyVertexConsumer(
+					BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerApi){
+				return (vertex, messages) -> {
+					PathfinderVertexType vertexValue = vertex.getValue();
+					vertexValue.resetLOE();
+					Iterator<ControlledGHSMessage> msgs = messages.iterator();					
+					if(!msgs.hasNext())
+						return;
+					PathfinderVertexID vertexId = vertex.getId();
+					long myLOEDestination = vertexValue.getLoeDestination();
+					long myfragmentIdentity = vertexValue.getFragmentIdentity();
+					while(msgs.hasNext()){
+						ControlledGHSMessage current = msgs.next();
+						long msgFragmentIdentity = current.getFragmentID();
+						long msgSender = current.getSenderID();
+						if(msgFragmentIdentity == myfragmentIdentity){ //CONNECT MESSAGE CROSSED THE FRAGMENT BORDER
+							workerApi.sendMessage(new PathfinderVertexID(myLOEDestination, vertexId.getLayer()), new ControlledGHSMessage(vertexId.get(), myfragmentIdentity, ControlledGHSMessage.CONNECT_MESSAGE));
+						}else if(myLOEDestination == msgSender){ //CONNECT MESSAGE CROSSED THE FRAGMENT BORDER
+							vertex.getEdgeValue(new PathfinderVertexID(msgSender, vertexId.getLayer())).setAsBranchEdge();//FRAGMENTS AGREE ON THE COMMON EDGE
+							vertexValue.addBranch();
+							vertexValue.resetLOE();
+						}
+					}
+				};
+			}
 		}
+		
 	}
 }
+
 
 
