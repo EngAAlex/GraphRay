@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unipg.pathfinder.mst.blocks;
+package unipg.pathfinder.mst.ghs.blocks;
 
 import java.util.Iterator;
 
@@ -20,13 +20,9 @@ import unipg.pathfinder.utils.Toolbox;
  * @author spark
  *
  */
-public class LeafDiscovery extends AbstractMSTBlockFactory {
-
-	/* (non-Javadoc)
-	 * @see org.apache.giraph.block_app.framework.BlockFactory#createBlock(org.apache.giraph.conf.GiraphConfiguration)
-	 */
-	@Override
-	public Block createBlock(GiraphConfiguration conf) {
+public class LeafDiscoveryBlock {
+	
+	public static Block createBlock(GiraphConfiguration conf) {
 		Block leafDiscoveryBlock = Pieces.<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ByteWritable>sendMessage("LeafDiscovery", ByteWritable.class, 
 				(vertex) -> {
 					PathfinderVertexType vertexValue = vertex.getValue();
@@ -59,14 +55,6 @@ public class LeafDiscovery extends AbstractMSTBlockFactory {
 					}
 				});
 		return new RepeatBlock(2, leafDiscoveryBlock);
-	}
-
-	/* (non-Javadoc)
-	 * @see org.apache.giraph.block_app.framework.BlockFactory#createExecutionStage(org.apache.giraph.conf.GiraphConfiguration)
-	 */
-	@Override
-	public Object createExecutionStage(GiraphConfiguration arg0) {
-		return "Leaf discovery";
 	}
 
 }
