@@ -38,14 +38,14 @@ public class ReportDeliveryPiece extends MSTPieceWithWorkerApi {
 				return;
 			PathfinderVertexID vertexId = vertex.getId();
 			Iterator<ControlledGHSMessage> msgs = messages.iterator();
-			long minLOEDestination = vertexValue.getLoeDestination();
+			PathfinderVertexID minLOEDestination = vertexValue.getLoeDestination();
 			double minLOE = vertexValue.getLOE();
 			while(msgs.hasNext()){
 				ControlledGHSMessage currentMessage = msgs.next();
 				short currentStatus = currentMessage.getStatus();
 				if(currentStatus == ControlledGHSMessage.LOEs_DEPLETED)
 					continue;
-				long currentSenderID = currentMessage.getSenderID();
+				PathfinderVertexID currentSenderID = currentMessage.getSenderID();
 				double currentValue = currentMessage.get();
 				if(currentValue < minLOE){
 					minLOE = currentValue;
@@ -53,8 +53,8 @@ public class ReportDeliveryPiece extends MSTPieceWithWorkerApi {
 				}
 			}
 			if(minLOE != Double.MAX_VALUE){
-				workerApi.sendMessage(new PathfinderVertexID(minLOEDestination, vertexId.getLayer()), new ControlledGHSMessage(vertexId.get(), vertexValue.getFragmentIdentity(), ControlledGHSMessage.CONNECT_MESSAGE));
-				workerApi.aggregate(MSTPathfinderMasterCompute.procedureCompletedAggregator, new BooleanWritable(false));
+				workerApi.sendMessage(minLOEDestination, new ControlledGHSMessage(vertexId, vertexValue.getFragmentIdentity(), ControlledGHSMessage.CONNECT_MESSAGE));
+				workerApi.aggregate(MSTPathfinderMasterCompute.cGHSProcedureCompletedAggregator, new BooleanWritable(false));
 			}
 		};
 	}

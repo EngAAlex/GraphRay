@@ -20,7 +20,7 @@ import unipg.pathfinder.utils.Toolbox;
 
 public class MISComputationBlock{
 
-	public static Block createBlock(GiraphConfiguration conf) {
+	public static Block createBlock() {
 		return new SequenceBlock(
 				Pieces.<PathfinderVertexID, PathfinderVertexType, Writable, DoubleWritable>sendMessageToNeighbors( //MIS COMPUTATION
 						"MISComputation", 
@@ -52,25 +52,25 @@ public class MISComputationBlock{
 							vertexValue.setRoot(!foundSmaller);
 							vertexValue.resetDepth();							
 						}),
-				Pieces.<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, LongWritable>sendMessage( //FRAGMENT RECONSTRUCTION FROM ROOTS
-						"FragmentReconstruction", LongWritable.class, 
+				Pieces.<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, PathfinderVertexID>sendMessage( //FRAGMENT RECONSTRUCTION FROM ROOTS
+						"FragmentReconstruction", PathfinderVertexID.class, 
 						(vertex) -> {
 							PathfinderVertexType vertexValue = vertex.getValue();
 							if(vertexValue.isRoot()){
-								long fragmentIdentity = vertex.getId().get();
+								PathfinderVertexID fragmentIdentity = vertex.getId();
 								vertexValue.setFragmentIdentity(fragmentIdentity);
-								return new LongWritable(fragmentIdentity);
+								return fragmentIdentity.copy();
 							}else
 								return null;
 						},
 						(vertex) -> {
-							return Toolbox.getBranchEdgesForVertex(vertex).iterator();
+							return Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH).iterator();
 						}, 
 						(vertex, messages) -> {
 							PathfinderVertexType vertexValue = vertex.getValue();
 							if(!vertexValue.isRoot()){
-								Iterator<LongWritable> msgs = messages.iterator();
-								vertexValue.setFragmentIdentity(msgs.next().get());
+								Iterator<PathfinderVertexID> msgs = messages.iterator();
+								vertexValue.setFragmentIdentity(msgs.next().copy());
 							}
 						})
 				);

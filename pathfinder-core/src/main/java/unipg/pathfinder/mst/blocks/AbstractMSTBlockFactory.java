@@ -18,13 +18,13 @@ import unipg.mst.common.vertextypes.PathfinderVertexType;
  */
 public abstract class AbstractMSTBlockFactory extends AbstractBlockFactory<Object> {
 	
-	public static final String controlledGHSExecutionStage = "CtrlGHS";
+	public static final String controlledGHSExecutionStage = "CtrlGHS";	
 	
 	/* (non-Javadoc)
 	 * @see org.apache.giraph.block_app.framework.AbstractBlockFactory#getVertexValueClass(org.apache.giraph.conf.GiraphConfiguration)
 	 */
 	@Override
-	protected Class<? extends Writable> getVertexValueClass(GiraphConfiguration arg0) {
+	protected Class<? extends Writable> getVertexValueClass(GiraphConfiguration conf) {
 		return PathfinderVertexType.class;
 	}
 	
@@ -32,7 +32,7 @@ public abstract class AbstractMSTBlockFactory extends AbstractBlockFactory<Objec
 	 * @see org.apache.giraph.block_app.framework.AbstractBlockFactory#getEdgeValueClass(org.apache.giraph.conf.GiraphConfiguration)
 	 */
 	@Override
-	protected Class<? extends Writable> getEdgeValueClass(GiraphConfiguration arg0) {
+	protected Class<? extends Writable> getEdgeValueClass(GiraphConfiguration conf) {
 		return PathfinderEdgeType.class;
 	}
 
@@ -40,7 +40,7 @@ public abstract class AbstractMSTBlockFactory extends AbstractBlockFactory<Objec
 	 * @see org.apache.giraph.block_app.framework.AbstractBlockFactory#getVertexIDClass(org.apache.giraph.conf.GiraphConfiguration)
 	 */
 	@Override
-	protected Class<? extends WritableComparable> getVertexIDClass(GiraphConfiguration arg0) {
+	protected Class<? extends WritableComparable> getVertexIDClass(GiraphConfiguration conf) {
 		return PathfinderVertexID.class;
 	}
 	

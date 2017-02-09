@@ -38,23 +38,22 @@ public class ReportGeneratorPiece extends MSTPieceWithWorkerApi {
 		return(vertex, messages) -> {
 			PathfinderVertexID vertexId = vertex.getId();
 			PathfinderVertexType vertexValue = vertex.getValue();
-			if(vertexValue.hasLoesDepleted() && !vertexValue.isRoot()){					
-				workerSendApi.sendMessage(new PathfinderVertexID(vertexValue.getFragmentIdentity(), vertexId.getLayer()), new ControlledGHSMessage(vertex.getId().get(), ControlledGHSMessage.LOEs_DEPLETED));
+			if(vertexValue.hasLOEsDepleted() && !vertexValue.isRoot()){					
+				workerSendApi.sendMessage(vertexValue.getFragmentIdentity(), new ControlledGHSMessage(vertex.getId(), ControlledGHSMessage.LOEs_DEPLETED));
 				return;
 			}
 			Iterator<ControlledGHSMessage> msgs = messages.iterator();
 			while(msgs.hasNext()){
 				ControlledGHSMessage currentMessage = msgs.next();
-				long currentFragment = currentMessage.getFragmentID();
+				PathfinderVertexID currentFragment = currentMessage.getFragmentID();
 				short currentMessageCode = currentMessage.getStatus();
 				switch(currentMessageCode){
 				case ControlledGHSMessage.REFUSE_MESSAGE:
-					PathfinderVertexID remoteID = new PathfinderVertexID(currentFragment, vertexId.getLayer());
-					if(!vertex.getEdgeValue(remoteID).isPathfinderCandidate())
-						workerSendApi.removeEdgesRequest(vertexId, remoteID); vertexValue.resetLOE(); break;						
+					if(!vertex.getEdgeValue(currentFragment).isPathfinderCandidate())
+						workerSendApi.removeEdgesRequest(vertexId, currentFragment); vertexValue.resetLOE(); break;						
 				case ControlledGHSMessage.ACCEPT_MESSAGE:
 					if(!vertexValue.isRoot())
-						workerSendApi.sendMessage(new PathfinderVertexID(vertexValue.getFragmentIdentity(), vertexId.getLayer()), new ControlledGHSMessage(vertexId.get(), vertexValue.getLOE(), ControlledGHSMessage.REPORT_MESSAGE));
+						workerSendApi.sendMessage(vertexValue.getFragmentIdentity(), new ControlledGHSMessage(vertexId, vertexValue.getLOE(), ControlledGHSMessage.REPORT_MESSAGE));
 					break;
 				}
 			}

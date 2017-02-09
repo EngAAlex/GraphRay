@@ -22,7 +22,7 @@ import unipg.pathfinder.utils.Toolbox;
  */
 public class LeafDiscoveryBlock {
 	
-	public static Block createBlock(GiraphConfiguration conf) {
+	public static Block createBlock() {
 		Block leafDiscoveryBlock = Pieces.<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ByteWritable>sendMessage("LeafDiscovery", ByteWritable.class, 
 				(vertex) -> {
 					PathfinderVertexType vertexValue = vertex.getValue();
@@ -38,7 +38,7 @@ public class LeafDiscoveryBlock {
 						return null;
 				},
 				(vertex) -> {
-					return Toolbox.getBranchEdgesForVertex(vertex).iterator();
+					return Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH).iterator();
 				},
 				(vertex, messages) -> {
 					PathfinderVertexType vertexValue = vertex.getValue();

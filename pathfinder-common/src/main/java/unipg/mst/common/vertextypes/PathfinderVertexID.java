@@ -15,14 +15,14 @@ import org.apache.hadoop.io.LongWritable;
  */
 public class PathfinderVertexID extends LongWritable {
 
-	int layer;
+//	int layer;
 	
 	/**
 	 * 
 	 */
 	public PathfinderVertexID() {
 		super();
-		layer = 0;
+//		layer = 0;
 	}
 	
 
@@ -31,26 +31,26 @@ public class PathfinderVertexID extends LongWritable {
 	 */
 	public PathfinderVertexID(long value) {
 		super(value);
-		layer = 0;
+//		layer = 0;
 	}
 	
 	public PathfinderVertexID(long value, int layer){
 		this(value);
-		this.layer = layer;
+//		this.layer = layer;
 	}
 
-	/**
-	 * @return the layer
-	 */
-	public int getLayer() {
-		return layer;
-	}
+//	/**
+//	 * @return the layer
+//	 */
+//	public int getLayer() {
+//		return layer;
+//	}
 	
 	/**
 	 * 
 	 */
 	public PathfinderVertexID copy() {
-		return new PathfinderVertexID(get(), layer);
+		return new PathfinderVertexID(get());
 	}
 	
 	/* (non-Javadoc)
@@ -59,7 +59,7 @@ public class PathfinderVertexID extends LongWritable {
 	@Override
 	public void readFields(DataInput in) throws IOException {
 		super.readFields(in);
-		layer = in.readInt();
+//		layer = in.readInt();
 	}
 	
 	/* (non-Javadoc)
@@ -68,7 +68,7 @@ public class PathfinderVertexID extends LongWritable {
 	@Override
 	public void write(DataOutput out) throws IOException {
 		super.write(out);
-		out.writeInt(layer);
+//		out.writeInt(layer);
 	}
 
 }

@@ -18,9 +18,10 @@ import org.apache.hadoop.io.Writable;
 public class PathfinderVertexType extends DoubleWritable { //MISValue
 
 	protected boolean isRoot;
-	protected long fragmentIdentity;
+	protected boolean boruvkaStatus;
+	protected PathfinderVertexID fragmentIdentity;
 	protected double loeValue;
-	protected long loeDestination;
+	protected PathfinderVertexID loeDestination;
 	protected int branches;
 	protected byte depth;
 	protected boolean loesDepleted;
@@ -31,6 +32,7 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	public PathfinderVertexType() {
 		super();
 		isRoot = true;
+		boruvkaStatus = true;
 		depth = -1;
 		branches = 0;
 		loeValue = Double.MAX_VALUE;
@@ -105,7 +107,7 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	 */
 	public void resetLOE(){
 		updateLOE(Double.MAX_VALUE);
-		setLoeDestination(-1);
+		setLoeDestination(null);
 	}
 
 
@@ -113,7 +115,7 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	/**
 	 * @return the loeDestination
 	 */
-	public long getLoeDestination() {
+	public PathfinderVertexID getLoeDestination() {
 		return loeDestination;
 	}
 
@@ -132,7 +134,7 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	/**
 	 * @return the edgeToRoot
 	 */
-	public long getFragmentIdentity() {
+	public PathfinderVertexID getFragmentIdentity() {
 		return fragmentIdentity;
 	}
 
@@ -141,7 +143,7 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	/**
 	 * @param edgeToRoot the edgeToRoot to set
 	 */
-	public void setFragmentIdentity(long fragmentIdentity) {
+	public void setFragmentIdentity(PathfinderVertexID fragmentIdentity) {
 		this.fragmentIdentity = fragmentIdentity;
 	}
 
@@ -150,7 +152,7 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	/**
 	 * @param loeDestination the loeDestination to set
 	 */
-	public void setLoeDestination(long loeDestination) {
+	public void setLoeDestination(PathfinderVertexID loeDestination) {
 		this.loeDestination = loeDestination;
 	}
 
@@ -159,7 +161,7 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	/**
 	 * @return the loesDepleted
 	 */
-	public boolean hasLoesDepleted() {
+	public boolean hasLOEsDepleted() {
 		return loesDepleted;
 	}
 
@@ -174,15 +176,34 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 
 
 
+	/**
+	 * @return the boruvkaStatus
+	 */
+	public boolean boruvkaStatus() {
+		return boruvkaStatus;
+	}
+
+
+
+	/**
+	 * @param boruvkaStatus the boruvkaStatus to set
+	 */
+	public void setInactive() {
+		this.boruvkaStatus = false;
+	}
+
+
+
 	/* (non-Javadoc)
 	 * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
 	 */
 	public void readFields(DataInput in) throws IOException {
 		super.readFields(in);
 		isRoot = in.readBoolean();
+		boruvkaStatus = in.readBoolean();
 		depth = in.readByte();
 		loeValue = in.readDouble();
-		loeDestination = in.readLong();
+		loeDestination.readFields(in);
 	}
 
 	/* (non-Javadoc)
@@ -191,9 +212,10 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	public void write(DataOutput out) throws IOException {
 		super.write(out);
 		out.writeBoolean(isRoot);
+		out.writeBoolean(boruvkaStatus);
 		out.writeByte(depth);
 		out.writeDouble(loeValue);
-		out.writeLong(loeDestination);
+		loeDestination.write(out);
 	}
 
 

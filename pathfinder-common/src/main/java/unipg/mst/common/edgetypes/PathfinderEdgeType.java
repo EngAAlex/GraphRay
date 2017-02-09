@@ -8,79 +8,120 @@ import org.apache.hadoop.io.DoubleWritable;
 
 public class PathfinderEdgeType extends DoubleWritable {
 
-	boolean branch = false;
-	boolean pathfinder = false;
-	boolean isPathfinderCandidate = false;
+	public static final short UNASSIGNED = 0;
+	public static final short BRANCH = 1;
+	public static final short PATHFINDER_CANDIDATE = 2;
+	public static final short INTERFRAGMENT_EDGE = 3;
+	public static final short DUMMY = 4;
+
+	short status;
 	
 	public PathfinderEdgeType() {
 		super();
+		status = UNASSIGNED;
 	}
 
 	public PathfinderEdgeType(double value) {
 		super(value);
+		status = UNASSIGNED;
 	}
 	
-//	public PathfinderEdgeType(double value, boolean bool){
-//		this(value);
-//		isPathfinderCandidate = bool;
-//	}
-//	
+	public PathfinderEdgeType(short status){
+		this.status = status;
+	}
+	
+	public PathfinderEdgeType(double value, short status){
+		super(value);
+		this.status = status;
+	}
+
+	/**
+	 * @return the status
+	 */
+	public short getStatus() {
+		return status;
+	}
+
 	/**
 	 * @return the branch
 	 */
 	public boolean isBranch() {
-		return branch;
+		return status == BRANCH;
 	}
 
 	/**
 	 * @param branch the branch to set
 	 */
 	public void setAsBranchEdge() {
-		branch = true;
+		status = BRANCH;
+	}
+
+	/**
+	 * @return the interFragmentEdge
+	 */
+	public boolean isInterFragmentEdge() {
+		return status == INTERFRAGMENT_EDGE;
+	}
+
+	/**
+	 * @param interFragmentEdge the interFragmentEdge to set
+	 */
+	public void setInterFragmentEdge() {
+		status = INTERFRAGMENT_EDGE;
 	}
 
 	/**
 	 * 
 	 */
 	public void setAsPathfinderCandidate() {
-		isPathfinderCandidate = true;
+		status = PATHFINDER_CANDIDATE;
 	}
 	
 	/**
 	 * @return the isPathfinderCandidate
 	 */
 	public boolean isPathfinderCandidate() {
-		return isPathfinderCandidate;
+		return status == PATHFINDER_CANDIDATE;
 	}
+//
+//	/**
+//	 * @return the pathfinder
+//	 */
+//	public boolean isPathfinder() {
+//		return pathfinder;
+//	}
 
-	/**
-	 * @return the pathfinder
-	 */
-	public boolean isPathfinder() {
-		return pathfinder;
-	}
-
-	/**
-	 * @param pathfinder the pathfinder to set
-	 */
-	public void setPathfinder(boolean pathfinder) {
-		this.pathfinder = pathfinder;
-	}
+//	/**
+//	 * @param pathfinder the pathfinder to set
+//	 */
+//	public void setPathfinder(boolean pathfinder) {
+//		this.pathfinder = pathfinder;
+//	}
 
 	@Override
 	public void readFields(DataInput in) throws IOException {
 		super.readFields(in);
-		isPathfinderCandidate = in.readBoolean();
-		branch = in.readBoolean();
-		pathfinder = in.readBoolean();
+		status = in.readShort();
 	}
 	
 	@Override
 	public void write(DataOutput out) throws IOException {
 		super.write(out);
-		out.writeBoolean(isPathfinderCandidate);
-		out.writeBoolean(branch);
-		out.writeBoolean(pathfinder);
+		out.writeShort(status);
+	}
+
+	/**
+	 * 
+	 */
+	public void revertToUnassigned() {
+		status = UNASSIGNED;
+	}
+
+	/**
+	 * @return
+	 */
+	public boolean unassigned() {
+		return status == UNASSIGNED;
 	}
 	
 }

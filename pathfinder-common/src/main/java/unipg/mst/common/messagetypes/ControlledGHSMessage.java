@@ -9,16 +9,19 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.DoubleWritable;
 
+import unipg.mst.common.vertextypes.PathfinderVertexID;
+
 /**
  * @author spark
  *
  */
 public class ControlledGHSMessage extends DoubleWritable{
 	
-	long senderID;
-	long fragmentID;
+	PathfinderVertexID senderID;
+	PathfinderVertexID fragmentID;
 	short status;
-//	int startingDepth;
+	
+	public static final short ROOT_UPDATE = 20;
 	
 	public static final short LEAF_DISCOVERY = 10;
 	public static final short DEPTH_1_DISCOVERY = 11;
@@ -36,28 +39,29 @@ public class ControlledGHSMessage extends DoubleWritable{
 	 */
 	public ControlledGHSMessage() {
 		super();
+		senderID = new PathfinderVertexID();
 	}
 	
-	public ControlledGHSMessage(long senderID, short status){
+	public ControlledGHSMessage(PathfinderVertexID senderID, short status){
 		this();
 		this.senderID = senderID;
 		this.status = status;
 	}
 	
-	public ControlledGHSMessage(long senderID, double value, short status){
+	public ControlledGHSMessage(PathfinderVertexID senderID, double value, short status){
 		super(value);		
 		this.senderID = senderID;
 		this.status = status;
 	}
 
-	public ControlledGHSMessage(long senderID, long fragmentID, short status){
+	public ControlledGHSMessage(PathfinderVertexID senderID, PathfinderVertexID fragmentID, short status){
 		this();
 		this.senderID = senderID;
 		this.status = status;
 		this.fragmentID = fragmentID;
 	}
 
-	public ControlledGHSMessage(long senderID, long fragmentID, double  value, short status){
+	public ControlledGHSMessage(PathfinderVertexID senderID, PathfinderVertexID fragmentID, double  value, short status){
 		super(value);
 		this.senderID = senderID;
 		this.status = status;
@@ -72,7 +76,7 @@ public class ControlledGHSMessage extends DoubleWritable{
 		/**
 	 * @return the senderID
 	 */
-	public long getSenderID() {
+	public PathfinderVertexID getSenderID() {
 		return senderID;
 	}
 
@@ -100,7 +104,7 @@ public class ControlledGHSMessage extends DoubleWritable{
 	/**
 	 * @return the fragmentID
 	 */
-	public long getFragmentID() {
+	public PathfinderVertexID getFragmentID() {
 		return fragmentID;
 	}
 
@@ -109,8 +113,8 @@ public class ControlledGHSMessage extends DoubleWritable{
 	 */
 	public void readFields(DataInput in) throws IOException {
 		super.readFields(in);
-		senderID = in.readLong();
-		fragmentID = in.readLong();
+		senderID.readFields(in);
+		fragmentID.readFields(in);
 		status = in.readShort();
 	}
 
@@ -119,9 +123,16 @@ public class ControlledGHSMessage extends DoubleWritable{
 	 */
 	public void write(DataOutput out) throws IOException {
 		super.write(out);
-		out.writeLong(senderID);
-		out.writeLong(fragmentID);
+		senderID.write(out);
+		fragmentID.write(out);
 		out.writeShort(status);
+	}
+
+	/**
+	 * @return
+	 */
+	public ControlledGHSMessage copy() {
+		return new ControlledGHSMessage(senderID.copy(), fragmentID.copy(), get(), status);
 	}
 
 }

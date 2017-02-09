@@ -37,16 +37,16 @@ public class ConnectionPiece extends MSTPieceWithWorkerApi {
 			if(!msgs.hasNext())
 				return;
 			PathfinderVertexID vertexId = vertex.getId();
-			long myLOEDestination = vertexValue.getLoeDestination();
-			long myfragmentIdentity = vertexValue.getFragmentIdentity();
+			PathfinderVertexID myLOEDestination = vertexValue.getLoeDestination();
+			PathfinderVertexID myfragmentIdentity = vertexValue.getFragmentIdentity();
 			while(msgs.hasNext()){
 				ControlledGHSMessage current = msgs.next();
-				long msgFragmentIdentity = current.getFragmentID();
-				long msgSender = current.getSenderID();
-				if(msgFragmentIdentity == myfragmentIdentity){ //CONNECT MESSAGE CROSSED THE FRAGMENT BORDER
-					workerApi.sendMessage(new PathfinderVertexID(myLOEDestination, vertexId.getLayer()), new ControlledGHSMessage(vertexId.get(), myfragmentIdentity, ControlledGHSMessage.CONNECT_MESSAGE));
+				PathfinderVertexID msgFragmentIdentity = current.getFragmentID();
+				PathfinderVertexID msgSender = current.getSenderID();
+				if(msgFragmentIdentity.equals(myfragmentIdentity)){ //CONNECT MESSAGE CROSSED THE FRAGMENT BORDER
+					workerApi.sendMessage(myLOEDestination, new ControlledGHSMessage(vertexId, myfragmentIdentity, ControlledGHSMessage.CONNECT_MESSAGE));
 				}else if(myLOEDestination == msgSender){ //CONNECT MESSAGE CROSSED THE FRAGMENT BORDER
-					vertex.getEdgeValue(new PathfinderVertexID(msgSender, vertexId.getLayer())).setAsBranchEdge();//FRAGMENTS AGREE ON THE COMMON EDGE
+					vertex.getEdgeValue(msgSender).setAsBranchEdge();//FRAGMENTS AGREE ON THE COMMON EDGE
 					vertexValue.addBranch();
 					vertexValue.resetLOE();
 				}

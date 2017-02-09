@@ -21,6 +21,7 @@ import unipg.mst.common.vertextypes.PathfinderVertexType;
 import unipg.pathdiner.mst.ghs.pieces.ConnectionPiece;
 import unipg.pathdiner.mst.ghs.pieces.ReportDeliveryPiece;
 import unipg.pathdiner.mst.ghs.pieces.ReportGeneratorPiece;
+import unipg.pathfinder.mst.blocks.LoeDiscoveryBlock;
 
 /**
  * @author spark
@@ -36,54 +37,38 @@ public class ControlledGHSBlock implements Supplier<Boolean>{
 	BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi;
 	
 	public static final String procedureCompletedAggregator = "AGG_COMPLETE_GHS";
-	
-	MasterCompute master;
-	
+		
+	LoeDiscoveryBlock ldb;
 	ReportGeneratorPiece rgp;
 	ReportDeliveryPiece rdp;
 	ConnectionPiece cp;
 	
 	NegatedControlledGHSBlockSupplier ncgs;
 	
-	public ControlledGHSBlock(MasterCompute master, BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi){
+	public ControlledGHSBlock(BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi){
 		this.workerSendApi = workerSendApi;
+		ldb = new LoeDiscoveryBlock(workerSendApi);
 		rgp = new ReportGeneratorPiece(workerSendApi);
 		rdp = new ReportDeliveryPiece(workerSendApi);
 		cp = new ConnectionPiece(workerSendApi);
-		this.master = master;
 		ncgs = new NegatedControlledGHSBlockSupplier(this);
 	}
-	
-	/* (non-Javadoc)
-	 * @see org.apache.giraph.block_app.framework.BlockFactory#createBlock(org.apache.giraph.conf.GiraphConfiguration)
-	 */
-	public Block createBlock(GiraphConfiguration conf) {
+
+	public Block getBlock() {
 		return new RepeatUntilBlock(0, 
 				new SequenceBlock(
-					getLOEDiscoveryBlock(conf),
+					ldb.getLOEDiscoveryBlock(),
 					new IfBlock(
-							ncgs, getLOEConnectionAndFragmentUpdateBlock(conf))
+							ncgs, getLOEConnectionAndFragmentUpdateBlock())
 					), 
 				 this);
 	}
 	
-	private Block getLOEDiscoveryBlock(GiraphConfiguration conf){
-		
-		return new SequenceBlock(
-			Pieces.<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage>sendMessage("LOEDiscovery", ControlledGHSMessage.class, 
-						LOEDiscoveryPieces.getLOEDiscoverySupplier(),
-						LOEDiscoveryPieces.getLOEDiscoveryTargetSelectionSupplier(),
-						LOEDiscoveryPieces.getLoeDiscoveryConsumerWithVertex(workerSendApi)),
-			new ReportGeneratorPiece(workerSendApi),
-			new ReportDeliveryPiece(workerSendApi)
-		);
-	}
-	
-	private Block getLOEConnectionAndFragmentUpdateBlock(GiraphConfiguration conf){
+	private Block getLOEConnectionAndFragmentUpdateBlock(){
 		return new SequenceBlock(
 				new ConnectionPiece(workerSendApi),
-				LeafDiscoveryBlock.createBlock(conf),
-				MISComputationBlock.createBlock(conf)
+				LeafDiscoveryBlock.createBlock(),
+				MISComputationBlock.createBlock()
 		);
 	}
 
@@ -92,7 +77,7 @@ public class ControlledGHSBlock implements Supplier<Boolean>{
 	 */
 	@Override
 	public Boolean get() {
-		return ((BooleanWritable)master.getAggregatedValue(procedureCompletedAggregator)).get();
+		return ((BooleanWritable)workerSendApi.getAggregatedValue(procedureCompletedAggregator)).get();
 	}
 	
 	public static class NegatedControlledGHSBlockSupplier implements Supplier<Boolean> {
