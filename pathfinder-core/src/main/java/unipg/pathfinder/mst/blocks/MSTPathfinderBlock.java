@@ -3,11 +3,18 @@
  */
 package unipg.pathfinder.mst.blocks;
 
+import java.util.Iterator;
+
 import org.apache.giraph.block_app.framework.api.BlockApiHandle;
 import org.apache.giraph.block_app.framework.block.Block;
 import org.apache.giraph.block_app.framework.block.SequenceBlock;
+import org.apache.giraph.block_app.library.Pieces;
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.edge.Edge;
 
+import unipg.mst.common.edgetypes.PathfinderEdgeType;
+import unipg.mst.common.vertextypes.PathfinderVertexID;
+import unipg.mst.common.vertextypes.PathfinderVertexType;
 import unipg.pathfinder.mst.boruvka.blocks.BoruvkaBlock;
 import unipg.pathfinder.mst.ghs.blocks.ControlledGHSBlock;
 
@@ -35,11 +42,22 @@ public class MSTPathfinderBlock extends AbstractMSTBlockFactory{
 	/* (non-Javadoc)
 	 * @see org.apache.giraph.block_app.framework.BlockFactory#createBlock(org.apache.giraph.conf.GiraphConfiguration)
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	public Block createBlock(GiraphConfiguration conf) {
 		return new SequenceBlock(
 				cGHSblock.getBlock(),
-				boruvkaBlock.getBlock()
+				boruvkaBlock.getBlock(),
+				Pieces.<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType>forAllVertices("DummyEdgesCleanup", 
+						(vertex) -> {
+							Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();
+							while(edges.hasNext()){
+								Edge<PathfinderVertexID, PathfinderEdgeType> current = edges.next();
+								if(current.getValue().isDummy())
+									bah.getWorkerSendApi().removeEdgesRequest(vertex.getId(), current.getTargetVertexId());
+							}
+						}
+				)
 		);
 	}
 

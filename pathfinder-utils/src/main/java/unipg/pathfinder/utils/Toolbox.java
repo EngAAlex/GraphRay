@@ -53,5 +53,23 @@ public class Toolbox {
 		}
 		return loes;
 	}
+	
+	public static void armPathfinderCandidates(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex){
+		Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();
+		while(edges.hasNext()){
+			Edge<PathfinderVertexID, PathfinderEdgeType> current = edges.next();
+			if(current.getValue().getStatus() == PathfinderEdgeType.PATHFINDER_CANDIDATE)
+				current.getValue().consolidatePathfinder();
+		}		
+	}
+	
+	public static void disarmPathfinderCandidates(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex){
+		Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();
+		while(edges.hasNext()){
+			Edge<PathfinderVertexID, PathfinderEdgeType> current = edges.next();
+			if(current.getValue().getStatus() == PathfinderEdgeType.PATHFINDER_CANDIDATE)
+				current.getValue().revertToUnassigned();
+		}
+	}
 
 }

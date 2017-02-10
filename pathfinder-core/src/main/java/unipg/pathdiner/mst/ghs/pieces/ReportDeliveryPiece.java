@@ -15,6 +15,7 @@ import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
 import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
 import unipg.pathfinder.mst.blocks.MSTPieceWithWorkerApi;
+import unipg.pathfinder.utils.Toolbox;
 
 /**
  * @author spark
@@ -38,8 +39,8 @@ public class ReportDeliveryPiece extends MSTPieceWithWorkerApi {
 				return;
 			PathfinderVertexID vertexId = vertex.getId();
 			Iterator<ControlledGHSMessage> msgs = messages.iterator();
-			PathfinderVertexID minLOEDestination = vertexValue.getLoeDestination();
-			double minLOE = vertexValue.getLOE();
+			PathfinderVertexID minLOEDestination = null;
+			double minLOE = Double.MAX_VALUE;
 			while(msgs.hasNext()){
 				ControlledGHSMessage currentMessage = msgs.next();
 				short currentStatus = currentMessage.getStatus();
@@ -52,10 +53,17 @@ public class ReportDeliveryPiece extends MSTPieceWithWorkerApi {
 					minLOEDestination = currentSenderID;
 				}
 			}
+			if(vertexValue.getLOE() < minLOE){
+				Toolbox.armPathfinderCandidates(vertex);
+				vertex.getEdgeValue(minLOEDestination).setAsBranchEdge();
+			}else{
+				Toolbox.disarmPathfinderCandidates(vertex);
+			}
 			if(minLOE != Double.MAX_VALUE){
 				workerApi.sendMessage(minLOEDestination, new ControlledGHSMessage(vertexId, vertexValue.getFragmentIdentity(), ControlledGHSMessage.CONNECT_MESSAGE));
 				workerApi.aggregate(MSTPathfinderMasterCompute.cGHSProcedureCompletedAggregator, new BooleanWritable(false));
 			}
+			vertexValue.resetLOE();
 		};
 	}
 }

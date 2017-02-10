@@ -48,7 +48,9 @@ public class BoruvkaMessageDeliveryPiece extends Piece<PathfinderVertexID, Pathf
 				else if(!vertexValue.isRoot()){
 					workerSendApi.sendMessage(vertexValue.getFragmentIdentity(), current.copy());
 					vertex.getEdgeValue(current.getSenderID()).setAsBranchEdge(); //edge is marked as branch edge
-				}else if(current.getStatus() == ControlledGHSMessage.CONNECT_MESSAGE){
+				}else{
+					if(vertex.getEdgeValue(current.getSenderID()) != null) //message is coming from another fragment directly to the root
+						vertex.getEdgeValue(current.getSenderID()).setAsBranchEdge();					
 					if(currentMsgFragment.get() > vertexValue.getFragmentIdentity().get()){ //the vertex is the discarded root
 						vertexValue.setFragmentIdentity(currentMsgFragment.copy());
 						vertexValue.setInactive();
