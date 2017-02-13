@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unipg.pathfinder.ghs.blocks;
+package unipg.pathfinder.blocks_framework.ghs.blocks;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -19,7 +19,7 @@ import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.messagetypes.ControlledGHSMessage;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
-import unipg.pathfinder.mst.blocks.MSTBlockWithApiHandle;
+import unipg.pathfinder.blocks_framework.mst.blocks.MSTBlockWithApiHandle;
 import unipg.pathfinder.utils.Toolbox;
 
 public class LOEDiscoveryPieces{

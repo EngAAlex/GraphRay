@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unipg.pathfinder.ghs.blocks;
+package unipg.pathfinder.blocks_framework.ghs.blocks;
 
 import java.util.Iterator;
 

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unipg.pathfinder.ghs.pieces;
+package unipg.pathfinder.blocks_framework.ghs.pieces;
 
 import org.apache.giraph.block_app.framework.api.BlockMasterApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;

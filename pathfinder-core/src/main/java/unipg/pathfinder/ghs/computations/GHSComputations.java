@@ -1,37 +1,35 @@
 /**
  * 
  */
-package unipg.pathfinder.ghs.pieces;
+package unipg.pathfinder.ghs.computations;
 
+import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
-import org.apache.giraph.function.vertex.ConsumerWithVertex;
+import org.apache.giraph.graph.Vertex;
+import org.apache.log4j.Logger;
 
 import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.messagetypes.ControlledGHSMessage;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
-import unipg.pathfinder.mst.blocks.MSTBlockWithApiHandle;
-import unipg.pathfinder.mst.blocks.MSTPieceWithWorkerApi;
+import unipg.pathfinder.PathfinderComputation;
 import unipg.pathfinder.utils.Toolbox;
 
-/**
- * @author spark
- *
- */
-public class ConnectionPiece extends MSTBlockWithApiHandle {
 
-	/**
-	 * @param workerSendApi
-	 */
-//	public ConnectionPiece(
-//			BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi) {
-//		super(workerSendApi);
-//	}
-
-	public ConsumerWithVertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, Iterable<ControlledGHSMessage>> getConnectReplyVertexConsumer(){
-		return (vertex, messages) -> {
+public class GHSComputations{
+	
+	protected static Logger log = Logger.getLogger(GHSComputations.class);
+	
+	
+	public static class LOEConnection extends PathfinderComputation<ControlledGHSMessage, ControlledGHSMessage> {
+		
+		/* (non-Javadoc)
+		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
+		 */
+		@Override
+		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
+				Iterable<ControlledGHSMessage> messages) throws IOException {
 			PathfinderVertexType vertexValue = vertex.getValue();
 			vertexValue.resetLOE();
 			Iterator<ControlledGHSMessage> msgs = messages.iterator();					
@@ -48,7 +46,7 @@ public class ConnectionPiece extends MSTBlockWithApiHandle {
 				PathfinderVertexID msgFragmentIdentity = current.getFragmentID();
 				PathfinderVertexID msgSender = current.getSenderID();
 				if(msgFragmentIdentity.equals(myfragmentIdentity)){ //CONNECT MESSAGE CROSSED THE FRAGMENT BORDER
-					getBlockApiHandle().getWorkerSendApi().sendMessage(myLOEDestination, new ControlledGHSMessage(vertexId, myfragmentIdentity, ControlledGHSMessage.CONNECT_MESSAGE));
+					sendMessage(myLOEDestination, new ControlledGHSMessage(vertexId, myfragmentIdentity, ControlledGHSMessage.CONNECT_MESSAGE));
 					vertex.getEdgeValue(myLOEDestination).setAsBranchEdge();
 					vertexValue.addBranch();
 					vertexValue.resetLOE();
@@ -60,7 +58,7 @@ public class ConnectionPiece extends MSTBlockWithApiHandle {
 						vertexValue.resetLOE();
 					}
 				}
-//			}
-		};
+		}
+		
 	}
 }

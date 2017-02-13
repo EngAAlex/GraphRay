@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unipg.pathfinder.ghs.blocks;
+package unipg.pathfinder.blocks_framework.ghs.blocks;
 
 import org.apache.giraph.block_app.framework.api.BlockApiHandle;
 import org.apache.giraph.block_app.framework.block.Block;
@@ -12,11 +12,11 @@ import org.apache.giraph.function.Supplier;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.log4j.Logger;
 
-import unipg.pathfinder.ghs.pieces.CGHSSupplierUpdaterPiece;
-import unipg.pathfinder.ghs.pieces.ConnectionPiece;
-import unipg.pathfinder.ghs.pieces.ReportDeliveryPiece;
-import unipg.pathfinder.ghs.pieces.ReportGeneratorPiece;
-import unipg.pathfinder.mst.blocks.LoeDiscoveryBlock;
+import unipg.pathfinder.blocks_framework.ghs.pieces.CGHSSupplierUpdaterPiece;
+import unipg.pathfinder.blocks_framework.ghs.pieces.ConnectionPiece;
+import unipg.pathfinder.blocks_framework.ghs.pieces.ReportDeliveryPiece;
+import unipg.pathfinder.blocks_framework.ghs.pieces.ReportGeneratorPiece;
+import unipg.pathfinder.blocks_framework.mst.blocks.LoeDiscoveryBlock;
 
 /**
  * @author spark

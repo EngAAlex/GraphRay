@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unipg.pathfinder.mst.blocks;
+package unipg.pathfinder.blocks_framework.mst.blocks;
 
 import org.apache.giraph.block_app.framework.api.BlockApiHandle;
 import org.apache.giraph.block_app.framework.block.BlockWithApiHandle;

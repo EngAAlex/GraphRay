@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unipg.pathfinder.boruvka.pieces;
+package unipg.pathfinder.blocks_framework.boruvka.pieces;
 
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
 import org.apache.giraph.block_app.framework.piece.Piece;

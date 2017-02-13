@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unipg.pathfinder.boruvka.blocks;
+package unipg.pathfinder.blocks_framework.boruvka.blocks;
 
 import java.util.Iterator;
 
@@ -25,12 +25,12 @@ import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.messagetypes.ControlledGHSMessage;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
-import unipg.pathfinder.boruvka.pieces.BoruvkaMessageDeliveryPiece;
-import unipg.pathfinder.boruvka.pieces.BoruvkaRootUpdatePiece;
-import unipg.pathfinder.boruvka.pieces.BoruvkaSupplierUpdaterPiece;
+import unipg.pathfinder.blocks_framework.boruvka.pieces.BoruvkaMessageDeliveryPiece;
+import unipg.pathfinder.blocks_framework.boruvka.pieces.BoruvkaRootUpdatePiece;
+import unipg.pathfinder.blocks_framework.boruvka.pieces.BoruvkaSupplierUpdaterPiece;
+import unipg.pathfinder.blocks_framework.mst.blocks.LoeDiscoveryBlock;
+import unipg.pathfinder.blocks_framework.mst.blocks.MSTBlockWithApiHandle;
 import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
-import unipg.pathfinder.mst.blocks.LoeDiscoveryBlock;
-import unipg.pathfinder.mst.blocks.MSTBlockWithApiHandle;
 import unipg.pathfinder.suppliers.Suppliers.BoruvkaSupplier;
 
 /**

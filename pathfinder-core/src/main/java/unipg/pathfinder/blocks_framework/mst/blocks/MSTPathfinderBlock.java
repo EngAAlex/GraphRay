@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unipg.pathfinder.mst.blocks;
+package unipg.pathfinder.blocks_framework.mst.blocks;
 
 import java.util.Iterator;
 
@@ -15,8 +15,8 @@ import org.apache.giraph.edge.Edge;
 import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
-import unipg.pathfinder.boruvka.blocks.BoruvkaBlock;
-import unipg.pathfinder.ghs.blocks.ControlledGHSBlock;
+import unipg.pathfinder.blocks_framework.boruvka.blocks.BoruvkaBlock;
+import unipg.pathfinder.blocks_framework.ghs.blocks.ControlledGHSBlock;
 
 /**
  * @author spark

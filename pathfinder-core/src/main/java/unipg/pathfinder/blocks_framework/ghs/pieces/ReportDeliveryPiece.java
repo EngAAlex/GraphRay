@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unipg.pathfinder.ghs.pieces;
+package unipg.pathfinder.blocks_framework.ghs.pieces;
 
 import java.util.Iterator;
 
@@ -14,8 +14,8 @@ import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.messagetypes.ControlledGHSMessage;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
+import unipg.pathfinder.blocks_framework.mst.blocks.MSTBlockWithApiHandle;
 import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
-import unipg.pathfinder.mst.blocks.MSTBlockWithApiHandle;
 import unipg.pathfinder.utils.Toolbox;
 
 /**
@@ -23,9 +23,7 @@ import unipg.pathfinder.utils.Toolbox;
  *
  */
 public class ReportDeliveryPiece extends MSTBlockWithApiHandle{
-	
-	protected static Logger log = Logger.getLogger("ReportDeliveryPiece");
-	
+		
 	/**
 	 * 
 	 */
@@ -41,7 +39,7 @@ public class ReportDeliveryPiece extends MSTBlockWithApiHandle{
 
 	public ConsumerWithVertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, Iterable<ControlledGHSMessage>> getLOEChoiceVertexConsumer(){
 		return (vertex, messages) -> {
-			log.info("Startedloechoice");
+//			log.info("Startedloechoice");
 			PathfinderVertexType vertexValue = vertex.getValue();
 			if(!vertexValue.isRoot()) //only roots will react now, and I'm sure only them will have messages incoming
 				return;
@@ -73,7 +71,7 @@ public class ReportDeliveryPiece extends MSTBlockWithApiHandle{
 			if(minLOE != Double.MAX_VALUE){
 				getBlockApiHandle().getWorkerSendApi().sendMessage(minLOEDestination, new ControlledGHSMessage(vertexId, vertexValue.getFragmentIdentity(), ControlledGHSMessage.CONNECT_MESSAGE));
 				getBlockApiHandle().getWorkerSendApi().aggregate(MSTPathfinderMasterCompute.cGHSProcedureCompletedAggregator, new BooleanWritable(false));
-				log.info("Aggregated a false mannaggia");
+//				log.info("Aggregated a false mannaggia");
 				paolo = false;
 			}
 			if(paolo)

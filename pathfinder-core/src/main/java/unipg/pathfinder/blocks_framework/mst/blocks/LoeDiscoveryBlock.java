@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unipg.pathfinder.mst.blocks;
+package unipg.pathfinder.blocks_framework.mst.blocks;
 
 import org.apache.giraph.aggregators.BooleanAndAggregator;
 import org.apache.giraph.block_app.framework.api.BlockMasterApi;
@@ -13,9 +13,9 @@ import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.messagetypes.ControlledGHSMessage;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
-import unipg.pathfinder.ghs.blocks.LOEDiscoveryPieces;
-import unipg.pathfinder.ghs.pieces.ReportDeliveryPiece;
-import unipg.pathfinder.ghs.pieces.ReportGeneratorPiece;
+import unipg.pathfinder.blocks_framework.ghs.blocks.LOEDiscoveryPieces;
+import unipg.pathfinder.blocks_framework.ghs.pieces.ReportDeliveryPiece;
+import unipg.pathfinder.blocks_framework.ghs.pieces.ReportGeneratorPiece;
 import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
 
 /**
