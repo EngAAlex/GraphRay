@@ -27,6 +27,13 @@ public class PathfinderEdgeType extends DoubleWritable {
 		status = UNASSIGNED;
 	}
 	
+	/**
+	 * @param string
+	 */
+	public PathfinderEdgeType(String string) {
+		this(Double.parseDouble(string));
+	}
+	
 	public PathfinderEdgeType(short status){
 		this.status = status;
 	}

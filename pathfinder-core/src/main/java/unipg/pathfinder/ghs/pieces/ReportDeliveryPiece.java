@@ -1,39 +1,47 @@
 /**
  * 
  */
-package unipg.pathdiner.mst.ghs.pieces;
+package unipg.pathfinder.ghs.pieces;
 
 import java.util.Iterator;
 
-import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
+import org.apache.giraph.function.Supplier;
 import org.apache.giraph.function.vertex.ConsumerWithVertex;
 import org.apache.hadoop.io.BooleanWritable;
+import org.apache.log4j.Logger;
 
 import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.messagetypes.ControlledGHSMessage;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
 import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
-import unipg.pathfinder.mst.blocks.MSTPieceWithWorkerApi;
+import unipg.pathfinder.mst.blocks.MSTBlockWithApiHandle;
 import unipg.pathfinder.utils.Toolbox;
 
 /**
  * @author spark
  *
  */
-public class ReportDeliveryPiece extends MSTPieceWithWorkerApi {
+public class ReportDeliveryPiece extends MSTBlockWithApiHandle{
+	
+	protected static Logger log = Logger.getLogger("ReportDeliveryPiece");
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -2742799699201974030L;
 
 	/**
 	 * @param workerSendApi
 	 */
-	public ReportDeliveryPiece(
-			BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi) {
-		super(workerSendApi);
-	}
+//	public ReportDeliveryPiece(
+//			BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi) {
+//		super(workerSendApi);
+//	}
 
-	public ConsumerWithVertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, Iterable<ControlledGHSMessage>> getLOEChoiceVertexConsumer(
-			BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerApi){
+	public ConsumerWithVertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, Iterable<ControlledGHSMessage>> getLOEChoiceVertexConsumer(){
 		return (vertex, messages) -> {
+			log.info("Startedloechoice");
 			PathfinderVertexType vertexValue = vertex.getValue();
 			if(!vertexValue.isRoot()) //only roots will react now, and I'm sure only them will have messages incoming
 				return;
@@ -56,14 +64,22 @@ public class ReportDeliveryPiece extends MSTPieceWithWorkerApi {
 			if(vertexValue.getLOE() < minLOE){
 				Toolbox.armPathfinderCandidates(vertex);
 				vertex.getEdgeValue(minLOEDestination).setAsBranchEdge();
+				minLOE = vertexValue.getLOE();
+				minLOEDestination = vertexValue.getLoeDestination();
 			}else{
 				Toolbox.disarmPathfinderCandidates(vertex);
 			}
+			boolean paolo = true;
 			if(minLOE != Double.MAX_VALUE){
-				workerApi.sendMessage(minLOEDestination, new ControlledGHSMessage(vertexId, vertexValue.getFragmentIdentity(), ControlledGHSMessage.CONNECT_MESSAGE));
-				workerApi.aggregate(MSTPathfinderMasterCompute.cGHSProcedureCompletedAggregator, new BooleanWritable(false));
+				getBlockApiHandle().getWorkerSendApi().sendMessage(minLOEDestination, new ControlledGHSMessage(vertexId, vertexValue.getFragmentIdentity(), ControlledGHSMessage.CONNECT_MESSAGE));
+				getBlockApiHandle().getWorkerSendApi().aggregate(MSTPathfinderMasterCompute.cGHSProcedureCompletedAggregator, new BooleanWritable(false));
+				log.info("Aggregated a false mannaggia");
+				paolo = false;
 			}
+			if(paolo)
+				Logger.getLogger(getClass()).info("Aggregated a true mannaggia");
 			vertexValue.resetLOE();
 		};
 	}
+
 }

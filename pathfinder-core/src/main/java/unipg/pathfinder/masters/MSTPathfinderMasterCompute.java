@@ -5,6 +5,7 @@ package unipg.pathfinder.masters;
 
 import org.apache.giraph.aggregators.BooleanAndAggregator;
 import org.apache.giraph.aggregators.IntSumAggregator;
+import org.apache.giraph.function.Supplier;
 import org.apache.giraph.master.DefaultMasterCompute;
 
 /**
@@ -17,7 +18,7 @@ public class MSTPathfinderMasterCompute extends DefaultMasterCompute {
 	public static final String boruvkaProcedureCompletedAggregator = "AGG_COMPLETE_BORUVKA";
 	
 	public static final String controllerGHSExecution = "CONTROLLED_GHS";
-	
+
 	/* (non-Javadoc)
 	 * @see org.apache.giraph.master.MasterCompute#compute()
 	 */

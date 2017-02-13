@@ -3,44 +3,48 @@
  */
 package unipg.pathfinder.mst.blocks;
 
-import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
+import org.apache.giraph.aggregators.BooleanAndAggregator;
+import org.apache.giraph.block_app.framework.api.BlockMasterApi;
 import org.apache.giraph.block_app.framework.block.Block;
 import org.apache.giraph.block_app.framework.block.SequenceBlock;
 import org.apache.giraph.block_app.library.Pieces;
-import org.apache.giraph.conf.GiraphConfiguration;
 
 import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.messagetypes.ControlledGHSMessage;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
-import unipg.pathdiner.mst.ghs.pieces.ReportDeliveryPiece;
-import unipg.pathdiner.mst.ghs.pieces.ReportGeneratorPiece;
-import unipg.pathfinder.mst.ghs.blocks.LOEDiscoveryPieces;
+import unipg.pathfinder.ghs.blocks.LOEDiscoveryPieces;
+import unipg.pathfinder.ghs.pieces.ReportDeliveryPiece;
+import unipg.pathfinder.ghs.pieces.ReportGeneratorPiece;
+import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
 
 /**
  * @author spark
  *
  */
-public class LoeDiscoveryBlock extends MSTPieceWithWorkerApi {
-
+public class LoeDiscoveryBlock extends MSTBlockWithApiHandle {
+	
+	/* (non-Javadoc)
+	 * @see org.apache.giraph.block_app.framework.piece.AbstractPiece#registerAggregators(org.apache.giraph.block_app.framework.api.BlockMasterApi)
+	 */
+	@SuppressWarnings("deprecation")
+	@Override
+	public void registerAggregators(BlockMasterApi masterApi) throws InstantiationException, IllegalAccessException {
+		masterApi.registerAggregator(MSTPathfinderMasterCompute.cGHSProcedureCompletedAggregator, BooleanAndAggregator.class);
+	}
+	
 	/**
 	 * @param workerSendApi
 	 */
-	public LoeDiscoveryBlock(
-			BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi) {
-		super(workerSendApi);
-	}
-
-	public Block getLOEDiscoveryBlock(){
-		
+	public Block getBlock() {
 		return new SequenceBlock(
-			Pieces.<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage>sendMessage("LOEDiscovery", ControlledGHSMessage.class, 
-						LOEDiscoveryPieces.getLOEDiscoverySupplier(),
-						LOEDiscoveryPieces.getLOEDiscoveryTargetSelectionSupplier(),
-						LOEDiscoveryPieces.getLoeDiscoveryConsumerWithVertex(workerSendApi)),
-			new ReportGeneratorPiece(workerSendApi),
-			new ReportDeliveryPiece(workerSendApi)
-		);
+				Pieces.<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage>sendMessage("LOEDiscovery", ControlledGHSMessage.class, 
+							LOEDiscoveryPieces.getLOEDiscoverySupplier(),
+							LOEDiscoveryPieces.getLOEDiscoveryTargetSelectionSupplier(),
+							LOEDiscoveryPieces.getLoeDiscoveryConsumerWithVertex(getBlockApiHandle().getWorkerSendApi())),
+				new ReportGeneratorPiece(),
+				new ReportDeliveryPiece()
+				);
 	}
 	
 }

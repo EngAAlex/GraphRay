@@ -25,6 +25,13 @@ public class PathfinderVertexID extends LongWritable {
 //		layer = 0;
 	}
 	
+	/**
+	 * @param string
+	 */
+	public PathfinderVertexID(String string) {
+		this(Long.parseLong(string));
+	}
+	
 
 	/**
 	 * @param value
@@ -45,7 +52,7 @@ public class PathfinderVertexID extends LongWritable {
 //	public int getLayer() {
 //		return layer;
 //	}
-	
+
 	/**
 	 * 
 	 */

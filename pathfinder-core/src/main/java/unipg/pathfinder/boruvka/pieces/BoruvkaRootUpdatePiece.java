@@ -1,40 +1,28 @@
 /**
  * 
  */
-package unipg.pathfinder.mst.boruvka.pieces;
+package unipg.pathfinder.boruvka.pieces;
 
 import java.util.Iterator;
 
 import org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
-import org.apache.giraph.block_app.framework.piece.Piece;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexReceiver;
 import org.apache.giraph.block_app.framework.piece.interfaces.VertexSender;
 import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.function.vertex.ConsumerWithVertex;
-import org.apache.hadoop.io.IntWritable;
 
 import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.messagetypes.ControlledGHSMessage;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
-import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
+import unipg.pathfinder.mst.blocks.MSTBlockWithApiHandle;
 import unipg.pathfinder.utils.Toolbox;
 
 /**
  * @author spark
  *
  */
-public class BoruvkaRootUpdatePiece extends Piece<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage, Object>{
-	
-	BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi;
-	
-	/**
-	 * 
-	 */
-	public BoruvkaRootUpdatePiece(BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi) {
-		this.workerSendApi = workerSendApi;
-	}
+public class BoruvkaRootUpdatePiece extends MSTBlockWithApiHandle {	
 	
 	/* (non-Javadoc)
 	 * @see org.apache.giraph.block_app.framework.piece.DefaultParentPiece#getVertexSender(org.apache.giraph.block_app.framework.api.BlockWorkerSendApi, java.lang.Object)
@@ -52,7 +40,7 @@ public class BoruvkaRootUpdatePiece extends Piece<PathfinderVertexID, Pathfinder
 			}
 		};
 	}
-	
+
 	/* (non-Javadoc)
 	 * @see org.apache.giraph.block_app.framework.piece.AbstractPiece#getVertexReceiver(org.apache.giraph.block_app.framework.api.BlockWorkerReceiveApi, java.lang.Object)
 	 */
@@ -64,7 +52,7 @@ public class BoruvkaRootUpdatePiece extends Piece<PathfinderVertexID, Pathfinder
 			if(!vertexValue.boruvkaStatus())
 				return;
 			if(vertex.getValue().isRoot()){
-				workerSendApi.aggregate(MSTPathfinderMasterCompute.boruvkaProcedureCompletedAggregator, new IntWritable(1));
+//				getBlockApiHandle().getWorkerSendApi().aggregate(MSTPathfinderMasterCompute.boruvkaProcedureCompletedAggregator, new IntWritable(1));
 				return;
 			}
 			Iterator<ControlledGHSMessage> msgs = messages.iterator();
@@ -72,15 +60,16 @@ public class BoruvkaRootUpdatePiece extends Piece<PathfinderVertexID, Pathfinder
 			Iterator<PathfinderVertexID> dummyEdges = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.DUMMY).iterator();
 			while(dummyEdges.hasNext()){
 				PathfinderVertexID currentDummy = dummyEdges.next();				//old pair of dummies are removed
-				workerSendApi.removeEdgesRequest(vertex.getId(), currentDummy);
-				workerSendApi.removeEdgesRequest(currentDummy, vertex.getId());
+				getBlockApiHandle().getWorkerSendApi().removeEdgesRequest(vertex.getId(), currentDummy);
+				getBlockApiHandle().getWorkerSendApi().removeEdgesRequest(currentDummy, vertex.getId());
 			}			
-//			if(msgs.hasNext()) what if is not the only message?
-//				throw new Exception();
+			//			if(msgs.hasNext()) what if is not the only message?
+			//				throw new Exception();
 			vertexValue.setFragmentIdentity(newFragmentID);
-			workerSendApi.addEdgeRequest(vertex.getId(), EdgeFactory.create(newFragmentID, new PathfinderEdgeType(PathfinderEdgeType.DUMMY))); //new pair is created
-			workerSendApi.addEdgeRequest(newFragmentID, EdgeFactory.create(vertex.getId(), new PathfinderEdgeType(PathfinderEdgeType.DUMMY)));
+			getBlockApiHandle().getWorkerSendApi().addEdgeRequest(vertex.getId(), EdgeFactory.create(newFragmentID, new PathfinderEdgeType(PathfinderEdgeType.DUMMY))); //new pair is created
+			getBlockApiHandle().getWorkerSendApi().addEdgeRequest(newFragmentID, EdgeFactory.create(vertex.getId(), new PathfinderEdgeType(PathfinderEdgeType.DUMMY)));
 		};
 	}
-	
+
+
 }

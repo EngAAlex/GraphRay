@@ -1,11 +1,16 @@
 /**
  * 
  */
-package unipg.pathfinder.mst.boruvka.blocks;
+package unipg.pathfinder.boruvka.blocks;
 
 import java.util.Iterator;
 
+import org.apache.giraph.aggregators.BooleanAndAggregator;
+import org.apache.giraph.aggregators.IntSumAggregator;
+import org.apache.giraph.block_app.framework.api.BlockApiHandle;
+import org.apache.giraph.block_app.framework.api.BlockMasterApi;
 import org.apache.giraph.block_app.framework.api.BlockWorkerSendApi;
+import org.apache.giraph.block_app.framework.api.CreateReducersApi;
 import org.apache.giraph.block_app.framework.block.Block;
 import org.apache.giraph.block_app.framework.block.RepeatUntilBlock;
 import org.apache.giraph.block_app.framework.block.SequenceBlock;
@@ -13,65 +18,84 @@ import org.apache.giraph.block_app.library.Pieces;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.function.Supplier;
 import org.apache.giraph.master.MasterCompute;
+import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.IntWritable;
 
 import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.messagetypes.ControlledGHSMessage;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
+import unipg.pathfinder.boruvka.pieces.BoruvkaMessageDeliveryPiece;
+import unipg.pathfinder.boruvka.pieces.BoruvkaRootUpdatePiece;
+import unipg.pathfinder.boruvka.pieces.BoruvkaSupplierUpdaterPiece;
 import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
 import unipg.pathfinder.mst.blocks.LoeDiscoveryBlock;
-import unipg.pathfinder.mst.boruvka.pieces.BoruvkaMessageDeliveryPiece;
-import unipg.pathfinder.mst.boruvka.pieces.BoruvkaRootUpdatePiece;
+import unipg.pathfinder.mst.blocks.MSTBlockWithApiHandle;
+import unipg.pathfinder.suppliers.Suppliers.BoruvkaSupplier;
 
 /**
  * @author spark
  *
  */
-public class BoruvkaBlock implements Supplier<Boolean> {
+public class BoruvkaBlock extends MSTBlockWithApiHandle implements Supplier<Boolean> {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -8754960762132943190L;
 
-	BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi;
-	
 	LoeDiscoveryBlock ldb;
 	BoruvkaMessageDeliveryPiece bmdp;
-	BoruvkaRootUpdatePiece brup;
-		
+	BoruvkaRootUpdatePiece brup;	
+	BoruvkaSupplierUpdaterPiece bsup;
+
+	BoruvkaSupplier bs;
 	/**
 	 * 
 	 */
-	public BoruvkaBlock(BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi){
-		this.workerSendApi = workerSendApi;
-		
-		bmdp = new BoruvkaMessageDeliveryPiece(workerSendApi);
-		ldb = new LoeDiscoveryBlock(workerSendApi);
-		brup = new BoruvkaRootUpdatePiece(workerSendApi);
+	public BoruvkaBlock(){
+		super();
+		bmdp = new BoruvkaMessageDeliveryPiece();
+		ldb = new LoeDiscoveryBlock();
+		brup = new BoruvkaRootUpdatePiece();
+		bsup = new BoruvkaSupplierUpdaterPiece();
 	}
 	
+	/* (non-Javadoc)
+	 * @see org.apache.giraph.block_app.framework.piece.AbstractPiece#registerAggregators(org.apache.giraph.block_app.framework.api.BlockMasterApi)
+	 */
+	@SuppressWarnings("deprecation")
+	@Override
+	public void registerAggregators(BlockMasterApi masterApi) throws InstantiationException, IllegalAccessException {
+		masterApi.registerAggregator(MSTPathfinderMasterCompute.cGHSProcedureCompletedAggregator, BooleanAndAggregator.class);
+	}
+
 	public Block getBlock(){
 		return new SequenceBlock(
 				boruvkaSetupBlock(),
-				new RepeatUntilBlock(0, 
-				new SequenceBlock(
-					ldb.getLOEDiscoveryBlock(),
-					bmdp,
-					brup),					
-				this)				
+				new RepeatUntilBlock(Integer.MAX_VALUE, 
+						new SequenceBlock(
+								ldb,
+								bmdp,
+								brup,
+								bsup),					
+						bsup.getSupplier())				
 				);
 	}
-	
+
 	/* (non-Javadoc)
 	 * @see org.apache.giraph.function.Supplier#get()
 	 */
 	@Override
 	public Boolean get() {
-		return ((IntWritable)workerSendApi.getAggregatedValue(MSTPathfinderMasterCompute.boruvkaProcedureCompletedAggregator)).get() == 1;
+		try{
+			return ((IntWritable)getBlockApiHandle().getWorkerSendApi().getAggregatedValue(MSTPathfinderMasterCompute.boruvkaProcedureCompletedAggregator)).get() == 1;
+		}catch(NullPointerException npe){
+			
+		}
+		return false;
 	}
-	
+
 	private static Block boruvkaSetupBlock(){
 		return Pieces.<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType>forAllVertices("BoruvkaSetup", 
 				(vertex) -> {

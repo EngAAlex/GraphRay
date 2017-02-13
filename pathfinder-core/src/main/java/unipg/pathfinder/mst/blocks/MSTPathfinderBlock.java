@@ -15,8 +15,8 @@ import org.apache.giraph.edge.Edge;
 import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
-import unipg.pathfinder.mst.boruvka.blocks.BoruvkaBlock;
-import unipg.pathfinder.mst.ghs.blocks.ControlledGHSBlock;
+import unipg.pathfinder.boruvka.blocks.BoruvkaBlock;
+import unipg.pathfinder.ghs.blocks.ControlledGHSBlock;
 
 /**
  * @author spark
@@ -24,7 +24,7 @@ import unipg.pathfinder.mst.ghs.blocks.ControlledGHSBlock;
  */
 public class MSTPathfinderBlock extends AbstractMSTBlockFactory{
 
-	BlockApiHandle bah;
+//	BlockApiHandle bah;
 	
 	ControlledGHSBlock cGHSblock;
 	BoruvkaBlock boruvkaBlock;
@@ -34,9 +34,9 @@ public class MSTPathfinderBlock extends AbstractMSTBlockFactory{
 	 */
 	@SuppressWarnings("unchecked")
 	public MSTPathfinderBlock() {
-		bah = new BlockApiHandle();
-		cGHSblock = new ControlledGHSBlock(bah.getWorkerSendApi());
-		boruvkaBlock = new BoruvkaBlock(bah.getWorkerSendApi());
+//		bah = new BlockApiHandle();
+		cGHSblock = new ControlledGHSBlock();
+		boruvkaBlock = new BoruvkaBlock();
 	}
 
 	/* (non-Javadoc)
@@ -45,16 +45,17 @@ public class MSTPathfinderBlock extends AbstractMSTBlockFactory{
 	@SuppressWarnings("unchecked")
 	@Override
 	public Block createBlock(GiraphConfiguration conf) {
+		
 		return new SequenceBlock(
 				cGHSblock.getBlock(),
-				boruvkaBlock.getBlock(),
+				boruvkaBlock.getBlock(),			
 				Pieces.<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType>forAllVertices("DummyEdgesCleanup", 
 						(vertex) -> {
 							Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();
 							while(edges.hasNext()){
 								Edge<PathfinderVertexID, PathfinderEdgeType> current = edges.next();
 								if(current.getValue().isDummy())
-									bah.getWorkerSendApi().removeEdgesRequest(vertex.getId(), current.getTargetVertexId());
+									new BlockApiHandle().getWorkerSendApi().removeEdgesRequest(vertex.getId(), current.getTargetVertexId());
 							}
 						}
 				)

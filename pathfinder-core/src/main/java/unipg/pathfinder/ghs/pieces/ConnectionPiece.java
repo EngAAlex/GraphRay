@@ -1,7 +1,7 @@
 /**
  * 
  */
-package unipg.pathdiner.mst.ghs.pieces;
+package unipg.pathfinder.ghs.pieces;
 
 import java.util.Iterator;
 
@@ -12,6 +12,7 @@ import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.messagetypes.ControlledGHSMessage;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
+import unipg.pathfinder.mst.blocks.MSTBlockWithApiHandle;
 import unipg.pathfinder.mst.blocks.MSTPieceWithWorkerApi;
 import unipg.pathfinder.utils.Toolbox;
 
@@ -19,18 +20,17 @@ import unipg.pathfinder.utils.Toolbox;
  * @author spark
  *
  */
-public class ConnectionPiece extends MSTPieceWithWorkerApi {
+public class ConnectionPiece extends MSTBlockWithApiHandle {
 
 	/**
 	 * @param workerSendApi
 	 */
-	public ConnectionPiece(
-			BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi) {
-		super(workerSendApi);
-	}
+//	public ConnectionPiece(
+//			BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerSendApi) {
+//		super(workerSendApi);
+//	}
 
-	public ConsumerWithVertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, Iterable<ControlledGHSMessage>> getConnectReplyVertexConsumer(
-			BlockWorkerSendApi<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, ControlledGHSMessage> workerApi){
+	public ConsumerWithVertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType, Iterable<ControlledGHSMessage>> getConnectReplyVertexConsumer(){
 		return (vertex, messages) -> {
 			PathfinderVertexType vertexValue = vertex.getValue();
 			vertexValue.resetLOE();
@@ -48,7 +48,7 @@ public class ConnectionPiece extends MSTPieceWithWorkerApi {
 				PathfinderVertexID msgFragmentIdentity = current.getFragmentID();
 				PathfinderVertexID msgSender = current.getSenderID();
 				if(msgFragmentIdentity.equals(myfragmentIdentity)){ //CONNECT MESSAGE CROSSED THE FRAGMENT BORDER
-					workerApi.sendMessage(myLOEDestination, new ControlledGHSMessage(vertexId, myfragmentIdentity, ControlledGHSMessage.CONNECT_MESSAGE));
+					getBlockApiHandle().getWorkerSendApi().sendMessage(myLOEDestination, new ControlledGHSMessage(vertexId, myfragmentIdentity, ControlledGHSMessage.CONNECT_MESSAGE));
 					vertex.getEdgeValue(myLOEDestination).setAsBranchEdge();
 					vertexValue.addBranch();
 					vertexValue.resetLOE();
