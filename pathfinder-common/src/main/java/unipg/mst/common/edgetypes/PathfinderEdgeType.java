@@ -35,12 +35,17 @@ public class PathfinderEdgeType extends DoubleWritable {
 	}
 	
 	public PathfinderEdgeType(short status){
+		super();
 		this.status = status;
 	}
 	
 	public PathfinderEdgeType(double value, short status){
 		super(value);
 		this.status = status;
+	}
+	
+	public PathfinderEdgeType copy(){
+		return new PathfinderEdgeType(get(), status);
 	}
 
 	/**
@@ -50,6 +55,10 @@ public class PathfinderEdgeType extends DoubleWritable {
 		return status;
 	}
 
+	public void setStatus(short status){
+		this.status = status;
+	}
+	
 	/**
 	 * @return the branch
 	 */
@@ -95,33 +104,7 @@ public class PathfinderEdgeType extends DoubleWritable {
 	public boolean isPathfinderCandidate() {
 		return status == PATHFINDER_CANDIDATE;
 	}
-//
-//	/**
-//	 * @return the pathfinder
-//	 */
-//	public boolean isPathfinder() {
-//		return pathfinder;
-//	}
-
-//	/**
-//	 * @param pathfinder the pathfinder to set
-//	 */
-//	public void setPathfinder(boolean pathfinder) {
-//		this.pathfinder = pathfinder;
-//	}
-
-	@Override
-	public void readFields(DataInput in) throws IOException {
-		super.readFields(in);
-		status = in.readShort();
-	}
 	
-	@Override
-	public void write(DataOutput out) throws IOException {
-		super.write(out);
-		out.writeShort(status);
-	}
-
 	/**
 	 * 
 	 */
@@ -141,6 +124,18 @@ public class PathfinderEdgeType extends DoubleWritable {
 	 */
 	public boolean isDummy() {
 		return status == DUMMY;
+	}
+
+	@Override
+	public void readFields(DataInput in) throws IOException {
+		super.readFields(in);
+		status = in.readShort();
+	}
+	
+	@Override
+	public void write(DataOutput out) throws IOException {
+		super.write(out);
+		out.writeShort(status);
 	}
 	
 }

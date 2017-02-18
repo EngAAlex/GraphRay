@@ -60,7 +60,7 @@ public class ReportDeliveryPiece extends MSTBlockWithApiHandle{
 				}
 			}
 			if(vertexValue.getLOE() < minLOE){
-				Toolbox.armPathfinderCandidates(vertex);
+//				Toolbox.armPathfinderCandidates(vertex);
 				vertex.getEdgeValue(minLOEDestination).setAsBranchEdge();
 				minLOE = vertexValue.getLOE();
 				minLOEDestination = vertexValue.getLoeDestination();

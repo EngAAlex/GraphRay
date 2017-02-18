@@ -4,7 +4,7 @@
 package unipg.pathfinder.boruvka.masters;
 
 import org.apache.giraph.master.MasterCompute;
-import org.apache.hadoop.io.BooleanWritable;
+import org.apache.hadoop.io.IntWritable;
 
 import unipg.pathfinder.boruvka.computations.BoruvkaComputations.BoruvkaRootUpdatePing;
 import unipg.pathfinder.boruvka.computations.BoruvkaComputations.BoruvkaRootUpdateReply;
@@ -42,7 +42,7 @@ public class BoruvkaMaster {
 		}
 		
 		if(counter == 3){
-			if(((BooleanWritable)master.getAggregatedValue(MSTPathfinderMasterCompute.boruvkaProcedureCompletedAggregator)).get())
+			if(((IntWritable)master.getAggregatedValue(MSTPathfinderMasterCompute.boruvkaProcedureCompletedAggregator)).get() == 1)
 				return true;
 			else{
 				counter = 0;

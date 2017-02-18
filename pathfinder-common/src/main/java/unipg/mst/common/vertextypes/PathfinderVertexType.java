@@ -23,7 +23,7 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	protected double loeValue;
 	protected PathfinderVertexID loeDestination;
 	protected int branches;
-	protected byte depth;
+	protected short depth;
 	protected boolean loesDepleted;
 	
 	/**
@@ -36,8 +36,21 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 		depth = -1;
 		branches = 0;
 		loeValue = Double.MAX_VALUE;
+		fragmentIdentity = new PathfinderVertexID();
 	}
 	
+	/**
+	 * 
+	 */
+	public PathfinderVertexType(PathfinderVertexID fragmentIdentity) {
+		super();
+		isRoot = true;
+		boruvkaStatus = true;
+		depth = -1;
+		branches = 0;
+		loeValue = Double.MAX_VALUE;
+		this.fragmentIdentity = fragmentIdentity;
+	}
 	
 
 	/**
@@ -71,14 +84,14 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	/**
 	 * @return the depth
 	 */
-	public int getDepth() {
+	public short getDepth() {
 		return depth;
 	}
 
 	/**
 	 * @param depth the depth to set
 	 */
-	public void setDepth(byte depth) {
+	public void setDepth(short depth) {
 		this.depth = depth;
 	}
 	
@@ -119,9 +132,28 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 		return loeDestination;
 	}
 
-	public void addBranch(){
-		branches++;
+	
+	/**
+	 * @return
+	 */
+	public int noOfBranches() {
+		return branches;
 	}
+	
+	public void setBranches(int branches){
+		this.branches = branches;
+	}	
+
+	public void addBranch(){
+		branches += 1;
+	}
+
+	/**
+	 * 
+	 */
+	public void deleteBranch() {
+		branches -= 1;
+}
 	
 	public boolean isLeaf(){
 		return branches == 1;
@@ -171,7 +203,7 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	 * @param loesDepleted the loesDepleted to set
 	 */
 	public void loesDepleted() {
-		this.loesDepleted = false;
+		this.loesDepleted = true;
 	}
 
 
@@ -201,9 +233,12 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 		super.readFields(in);
 		isRoot = in.readBoolean();
 		boruvkaStatus = in.readBoolean();
-		depth = in.readByte();
+		loesDepleted = in.readBoolean();
+		depth = in.readShort();
 		loeValue = in.readDouble();
+		branches = in.readInt();
 		loeDestination.readFields(in);
+		fragmentIdentity.readFields(in);
 	}
 
 	/* (non-Javadoc)
@@ -213,10 +248,12 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 		super.write(out);
 		out.writeBoolean(isRoot);
 		out.writeBoolean(boruvkaStatus);
-		out.writeByte(depth);
+		out.writeBoolean(loesDepleted);
+		out.writeShort(depth);
 		out.writeDouble(loeValue);
+		out.writeInt(branches);
 		loeDestination.write(out);
+		fragmentIdentity.write(out);
 	}
-
 
 }

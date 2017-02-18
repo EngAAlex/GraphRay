@@ -52,7 +52,7 @@ public class ConnectionPiece extends MSTBlockWithApiHandle {
 					vertex.getEdgeValue(myLOEDestination).setAsBranchEdge();
 					vertexValue.addBranch();
 					vertexValue.resetLOE();
-					Toolbox.armPathfinderCandidates(vertex);
+//					Toolbox.armPathfinderCandidates(this ,vertex);
 				}else if(myLOEDestination == msgSender){ //CONNECT MESSAGE CROSSED THE FRAGMENT BORDER
 					if(!vertexValue.isRoot()){
 						vertex.getEdgeValue(msgSender).setAsBranchEdge();//FRAGMENTS AGREE ON THE COMMON EDGE

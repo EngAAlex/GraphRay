@@ -39,7 +39,7 @@ public class LOEDiscoveryPieces{
 			Stack<PathfinderVertexID> loes = null;
 
 			if(vertexValue.getLOE() == Double.MAX_VALUE){
-				loes = Toolbox.getLOEsForVertex(vertex, PathfinderEdgeType.UNASSIGNED);
+				loes = Toolbox.getLOEsForVertex(vertex);
 
 				if(loes == null){
 					vertexValue.loesDepleted();

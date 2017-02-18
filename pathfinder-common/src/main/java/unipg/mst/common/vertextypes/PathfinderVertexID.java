@@ -32,6 +32,10 @@ public class PathfinderVertexID extends LongWritable {
 		this(Long.parseLong(string));
 	}
 	
+	public PathfinderVertexID(PathfinderVertexID id){
+		set(id.get());
+	}
+	
 
 	/**
 	 * @param value
@@ -77,5 +81,67 @@ public class PathfinderVertexID extends LongWritable {
 		super.write(out);
 //		out.writeInt(layer);
 	}
+	
+	public static class PathfinderVertexIDWithShortValue extends PathfinderVertexID {
+		
+		short value;
+		
+		public PathfinderVertexIDWithShortValue(){
+			super();
+		}
+		
+		public PathfinderVertexIDWithShortValue(PathfinderVertexID id, short value){
+			super(id);
+			this.value = value;
+		}
+		
+//		/**
+//		 * @return the value
+//		 */
+//		public short getByteValue() {
+//			return value;
+//		}
+//
+//		/**
+//		 * @param value the value to set
+//		 */
+//		public void setByteValue(short value) {
+//			this.value = value;
+//		}
+
+		/**
+		 * @return the depth
+		 */
+		public short getDepth() {
+			return value;
+		}
+
+		/**
+		 * @param depth the depth to set
+		 */
+		public void setDepth(short depth) {
+			this.value = depth;
+		}
+
+		/* (non-Javadoc)
+		 * @see unipg.mst.common.vertextypes.PathfinderVertexID#readFields(java.io.DataInput)
+		 */
+		@Override
+		public void readFields(DataInput in) throws IOException {
+			super.readFields(in);
+			value = in.readShort();
+//			depth = in.readShort();
+		}
+		
+		/* (non-Javadoc)
+		 * @see unipg.mst.common.vertextypes.PathfinderVertexID#write(java.io.DataOutput)
+		 */
+		@Override
+		public void write(DataOutput out) throws IOException {
+			super.write(out);
+			out.writeShort(value);
+//			out.writeShort(depth);
+		}	
+	}	
 
 }

@@ -27,8 +27,9 @@ public class ControlledGHSMessage extends DoubleWritable{
 	public static final short DEPTH_1_DISCOVERY = 11;
 	public static final short MIS_MESSAGE = 12;
 	
-	public static final short LOEs_DEPLETED = 4;
-	public static final short CONNECT_MESSAGE = 3;	
+	public static final short FORCE_ACCEPT = 6;
+	public static final short LOEs_DEPLETED = 5;
+	public static final short CONNECT_MESSAGE = 4;	
 	public static final short REPORT_MESSAGE = 3;
 	public static final short ACCEPT_MESSAGE = 2;
 	public static final short TEST_MESSAGE = 1;
@@ -40,17 +41,20 @@ public class ControlledGHSMessage extends DoubleWritable{
 	public ControlledGHSMessage() {
 		super();
 		senderID = new PathfinderVertexID();
+		fragmentID = new PathfinderVertexID();
 	}
 	
 	public ControlledGHSMessage(PathfinderVertexID senderID, short status){
 		this();
 		this.senderID = senderID;
+		fragmentID = new PathfinderVertexID();		
 		this.status = status;
 	}
 	
 	public ControlledGHSMessage(PathfinderVertexID senderID, double value, short status){
 		super(value);		
 		this.senderID = senderID;
+		fragmentID = new PathfinderVertexID();
 		this.status = status;
 	}
 
