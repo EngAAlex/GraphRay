@@ -27,6 +27,10 @@ public class MSTPathfinderSetup extends PathfinderComputation<ControlledGHSMessa
 		super.compute(vertex, messages);
 		vertex.getValue().setFragmentIdentity(vertex.getId().copy());
 		log.info(" setting fragment " + vertex.getValue().getFragmentIdentity());
+		if(vertex.getNumEdges() == 0){
+			vertex.getValue().loesDepleted();
+			vertex.voteToHalt();
+		}
 	}
 	
 }

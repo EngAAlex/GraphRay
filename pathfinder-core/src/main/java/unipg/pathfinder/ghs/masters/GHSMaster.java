@@ -6,7 +6,6 @@ package unipg.pathfinder.ghs.masters;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.hadoop.io.BooleanWritable;
 
-import unipg.pathfinder.ghs.computations.LOEDiscovery;
 import unipg.pathfinder.ghs.computations.LeafDiscoveryRoutine;
 import unipg.pathfinder.ghs.computations.MISRoutine;
 import unipg.pathfinder.ghs.computations.GHSComputations.LOEConnection;
@@ -22,7 +21,7 @@ public class GHSMaster {
 	MasterCompute master;
 	LeafDiscoveryRoutine ldr;
 	MISRoutine mr;
-	LOEDiscovery lD;
+	LOEDiscoveryMaster lD;
 	boolean setup = true;
 	int counter = 0;
 
@@ -31,7 +30,7 @@ public class GHSMaster {
 	/**
 	 * 
 	 */
-	public GHSMaster(MasterCompute master, LOEDiscovery lD) {
+	public GHSMaster(MasterCompute master, LOEDiscoveryMaster lD) {
 		this.master = master;
 		this.lD = lD;
 		ldr = new LeafDiscoveryRoutine(master);

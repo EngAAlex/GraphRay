@@ -24,7 +24,7 @@ public class MSTEdgeOutputFormat extends TextEdgeOutputFormat<PathfinderVertexID
 	 * @see org.apache.giraph.io.formats.TextEdgeOutputFormat#createEdgeWriter(org.apache.hadoop.mapreduce.TaskAttemptContext)
 	 */
 	@Override
-	public org.apache.giraph.io.formats.TextEdgeOutputFormat.TextEdgeWriter createEdgeWriter(TaskAttemptContext arg0)
+	public TextEdgeWriter createEdgeWriter(TaskAttemptContext arg0)
 			throws IOException, InterruptedException {
 		return new MSTEdgeWriter();
 	}
@@ -37,7 +37,7 @@ public class MSTEdgeOutputFormat extends TextEdgeOutputFormat<PathfinderVertexID
 		@Override
 		protected Text convertEdgeToLine(PathfinderVertexID src, PathfinderVertexType srcValue,
 				Edge<PathfinderVertexID, PathfinderEdgeType> edge) throws IOException {
-			return new Text(src.get() + "\t" + edge.getTargetVertexId().get() + "\t" + edge.getValue().get());
+			return new Text(src.get() + "\t" + edge.getTargetVertexId().get() + "\t" + edge.getValue().get() + "\t" + PathfinderEdgeType.CODE_STRINGS[edge.getValue().getStatus()]);
 		}
 		
 	}

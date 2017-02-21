@@ -4,7 +4,10 @@
 package unipg.pathfinder.ghs.computations;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
+
 
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.master.MasterCompute;
@@ -25,7 +28,7 @@ import unipg.pathfinder.utils.Toolbox;
  *
  */
 public class LeafDiscoveryRoutine {
-
+	
 	MasterCompute master;
 	int counter = 0;
 
@@ -64,24 +67,26 @@ public class LeafDiscoveryRoutine {
 		@Override
 		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
 				Iterable<Writable> messages) throws IOException {
-			PathfinderVertexType vertexValue = vertex.getValue();
 			super.compute(vertex, messages);
+			PathfinderVertexType vertexValue = vertex.getValue();
 
+			vertexValue.setFragmentIdentity(null);
+			
 			log.info("I have " + vertexValue.noOfBranches() + " branches");
 			
 			vertexValue.resetDepth();
 
-			if(vertexValue.isIsolated()){
-//				vertexValue.setDepth((short) 1);
-				return;
-			}
+//			if(vertexValue.isIsolated()){
+////				vertexValue.setDepth((short) 1);
+//				return;
+//			}
 
+			Collection<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH, PathfinderEdgeType.INTERFRAGMENT_EDGE);				
 			//			if(vertexValue.getDepth() == -1){
-			if(vertexValue.isLeaf()){
-				Iterator<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH).iterator();				
+			if(destinations != null && destinations.size() == 1){
 				log.info("sending leaf message");
 				vertexValue.setDepth((short) 0);
-				sendMessageToMultipleEdges(destinations, new PathfinderVertexIDWithShortValue(vertex.getId(), (short) 0));
+				sendMessageToMultipleEdges(destinations.iterator(), new PathfinderVertexIDWithShortValue(vertex.getId(), (short) 0));
 				//				}else 
 				//					sendMessageToMultipleEdges(destinations, new PathfinderVertexIDWithByte(vertex.getId().copy(), (byte) 1));
 			}else
@@ -99,17 +104,16 @@ public class LeafDiscoveryRoutine {
 				Iterable<Writable> messages) throws IOException {
 			super.compute(vertex, messages);
 			PathfinderVertexType vertexValue = vertex.getValue();
-			if(vertexValue.isIsolated())
-				return;
-
-			Iterator<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH).iterator();
+//			if(vertexValue.isIsolated())
+//				return;
 
 			if(vertexValue.getDepth() == 1){
 				log.info("sending depth 1 message");
 				//					vertexValue.setDepth((byte) 0);
 				//					sendMessageToMultipleEdges(destinations, new PathfinderVertexIDWithByte(vertex.getId().copy(), (byte) 0));
 				//				}else 
-				sendMessageToMultipleEdges(destinations, new PathfinderVertexIDWithShortValue(vertex.getId(), (short) 1));
+				sendMessageToMultipleEdges(Toolbox.getSpecificEdgesForVertex(
+						vertex, PathfinderEdgeType.BRANCH, PathfinderEdgeType.INTERFRAGMENT_EDGE).iterator(), new PathfinderVertexIDWithShortValue(vertex.getId(), (short) 1));
 			}else
 				return;
 		}		
@@ -143,6 +147,7 @@ public class LeafDiscoveryRoutine {
 					if(depth == -1){
 						log.info("setting depth to 2");
 						vertexValue.setDepth((short) 2);
+						vertexValue.setFragmentIdentity(message.getPfID());
 					}
 				break;
 				}

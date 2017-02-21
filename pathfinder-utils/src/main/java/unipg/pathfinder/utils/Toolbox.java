@@ -4,6 +4,7 @@
 package unipg.pathfinder.utils;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Stack;
@@ -27,7 +28,7 @@ public class Toolbox {
 
 	protected static Logger log = Logger.getLogger(Toolbox.class);
 
-	public static Iterable<PathfinderVertexID> getSpecificEdgesForVertex(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short ... condition){
+	public static Collection<PathfinderVertexID> getSpecificEdgesForVertex(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short ... condition){
 		HashSet<PathfinderVertexID> edgesToUse = null;
 		Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();
 		while(edges.hasNext()){
@@ -41,13 +42,13 @@ public class Toolbox {
 		return edgesToUse;
 	}
 
-	public static Stack<PathfinderVertexID> getLOEsForVertex(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex){
+	public static Stack<PathfinderVertexID> getLOEsForVertex(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short condition){
 		Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();
 		Stack<PathfinderVertexID> loes = null;
 		double min = Double.MAX_VALUE;
 		while(edges.hasNext()){
 			Edge<PathfinderVertexID, PathfinderEdgeType> current = edges.next();
-			if(current.getValue().getStatus() != PathfinderEdgeType.UNASSIGNED)
+			if(current.getValue().getStatus() != condition)
 				continue;
 			double currentEdgeValue = current.getValue().get();
 			PathfinderVertexID currentNeighbor = current.getTargetVertexId();
@@ -89,7 +90,7 @@ public class Toolbox {
 			}
 		}		
 	}
-	
+
 	public static void armRemotePathfinderCandidates(AbstractComputation computation, Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex) throws IOException{
 		Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();
 		while(edges.hasNext()){
@@ -97,6 +98,7 @@ public class Toolbox {
 			if(current.getValue().getStatus() == PathfinderEdgeType.PATHFINDER_CANDIDATE){
 				PathfinderVertexID remoteID = current.getTargetVertexId().copy();
 				updateEdgeValueWithStatus(vertex, PathfinderEdgeType.PATHFINDER, remoteID);
+				log.info("Arming remote pathfinder " + remoteID + " to " + vertex.getId());
 				computation.removeEdgesRequest(remoteID, vertex.getId());
 				computation.addEdgeRequest(remoteID,
 						EdgeFactory.create(vertex.getId(), new PathfinderEdgeType(current.getValue().get(), PathfinderEdgeType.PATHFINDER)));
@@ -104,16 +106,16 @@ public class Toolbox {
 		}		
 	}
 
-	public static void disarmPathfinderCandidates(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex){
+	public static void disarmPathfinderCandidates(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short oldCondition){
 		Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();
 		while(edges.hasNext()){
 			Edge<PathfinderVertexID, PathfinderEdgeType> current = edges.next();
 			if(current.getValue().getStatus() == PathfinderEdgeType.PATHFINDER_CANDIDATE){
-				updateEdgeValueWithStatus(vertex, PathfinderEdgeType.UNASSIGNED, current.getTargetVertexId());
+				updateEdgeValueWithStatus(vertex, oldCondition, current.getTargetVertexId());
 			}
 		}
 	}
-	
+
 	/**
 	 * 
 	 */
@@ -144,10 +146,11 @@ public class Toolbox {
 
 	public static void updateEdgeValueWithStatus(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short newStatus, PathfinderVertexID recipient){
 		PathfinderEdgeType pet = vertex.getEdgeValue(recipient);
-//		pet.setStatus(newStatus);
+		//		pet.setStatus(newStatus);
+		log.info("Setting edge from " + vertex.getId().get() + " to " + recipient.get() + " as " + PathfinderEdgeType.CODE_STRINGS[newStatus]);
 		vertex.setEdgeValue(recipient, new PathfinderEdgeType(pet.get(), newStatus));		
 	}
-	
+
 	public static void setMultipleEdgesAsCandidates(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, Iterable<PathfinderVertexID> recipients){
 		updateMultipleEdgeValueWithStatus(vertex, PathfinderEdgeType.PATHFINDER_CANDIDATE, recipients);
 	}
@@ -155,13 +158,14 @@ public class Toolbox {
 	public static void setMultipleEdgesAsInterfragment(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, Iterable<PathfinderVertexID> recipients){
 		updateMultipleEdgeValueWithStatus(vertex, PathfinderEdgeType.INTERFRAGMENT_EDGE, recipients);
 	}
-	
+
 	public static void updateMultipleEdgeValueWithStatus(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short newStatus, Iterable<PathfinderVertexID> recipients){
-		for(PathfinderVertexID recipient : recipients){
-			updateEdgeValueWithStatus(vertex, newStatus, recipient);
-//			PathfinderEdgeType pet = vertex.getEdgeValue(recipient).copy();
-//			pet.setStatus(newStatus);
-//			vertex.setEdgeValue(recipient, pet);		
-		}
+		if(recipients != null)
+			for(PathfinderVertexID recipient : recipients){
+				updateEdgeValueWithStatus(vertex, newStatus, recipient);
+				//			PathfinderEdgeType pet = vertex.getEdgeValue(recipient).copy();
+				//			pet.setStatus(newStatus);
+				//			vertex.setEdgeValue(recipient, pet);		
+			}
 	}
 }

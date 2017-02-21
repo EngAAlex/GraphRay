@@ -13,7 +13,14 @@ public class PathfinderEdgeType extends DoubleWritable {
 	public static final short PATHFINDER_CANDIDATE = 2;
 	public static final short INTERFRAGMENT_EDGE = 3;
 	public static final short DUMMY = 4;
-	public static final short PATHFINDER = 5;	
+	public static final short PATHFINDER = 5;
+	
+	public static final String[] CODE_STRINGS = new String[]{"UNASSIGNED",
+															"BRANCH",
+															"PATHFINDER_CANDIDATE",
+															"INTERFRAGMENT",
+															"DUMMY",
+															"PATHFINDER"};
 
 	short status;
 	
@@ -99,11 +106,19 @@ public class PathfinderEdgeType extends DoubleWritable {
 	}
 	
 	/**
+	 * @return
+	 */
+	public boolean isPathfinder() {
+		return status == PATHFINDER;
+	}
+	
+	/**
 	 * @return the isPathfinderCandidate
 	 */
 	public boolean isPathfinderCandidate() {
 		return status == PATHFINDER_CANDIDATE;
 	}
+	
 	
 	/**
 	 * 

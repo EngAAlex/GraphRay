@@ -122,6 +122,10 @@ public class PathfinderVertexID extends LongWritable {
 		public void setDepth(short depth) {
 			this.value = depth;
 		}
+		
+		public PathfinderVertexID getPfID(){
+			return new PathfinderVertexID(super.get());
+		}
 
 		/* (non-Javadoc)
 		 * @see unipg.mst.common.vertextypes.PathfinderVertexID#readFields(java.io.DataInput)

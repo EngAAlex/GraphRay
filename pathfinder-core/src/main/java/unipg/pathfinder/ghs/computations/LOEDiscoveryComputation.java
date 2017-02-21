@@ -4,16 +4,22 @@
 package unipg.pathfinder.ghs.computations;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
 
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.master.MasterCompute;
+import org.apache.giraph.worker.WorkerGlobalCommUsage;
 import org.apache.hadoop.io.BooleanWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.log4j.Logger;
 
 import unipg.mst.common.edgetypes.PathfinderEdgeType;
@@ -24,57 +30,39 @@ import unipg.pathfinder.PathfinderComputation;
 import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
 import unipg.pathfinder.utils.Toolbox;
 
-/**
- * @author spark
- *
- */
-public class LOEDiscovery {
 
-	protected static Logger log = Logger.getLogger(LOEDiscovery.class);
 
-	MasterCompute master;
-	int counter = 0;
+public abstract class LOEDiscoveryComputation extends PathfinderComputation<ControlledGHSMessage, ControlledGHSMessage>{
 
-	/**
-	 * 
+	
+	
+	protected short loesToDiscover;
+	protected short loesToRemove;
+
+	/* (non-Javadoc)
+	 * @see org.apache.giraph.graph.AbstractComputation#initialize(org.apache.giraph.graph.GraphState, org.apache.giraph.comm.WorkerClientRequestProcessor, org.apache.giraph.bsp.CentralizedServiceWorker, org.apache.giraph.worker.WorkerGlobalCommUsage)
 	 */
-	public LOEDiscovery(MasterCompute master) {
-		this.master = master;
+	@Override
+	public void initialize(GraphState graphState,
+			WorkerClientRequestProcessor<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> workerClientRequestProcessor,
+			CentralizedServiceWorker<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> serviceWorker,
+			WorkerGlobalCommUsage workerGlobalCommUsage) {
+		super.initialize(graphState, workerClientRequestProcessor, serviceWorker, workerGlobalCommUsage);
+
+		loesToDiscover = (short) ((IntWritable)getAggregatedValue(MSTPathfinderMasterCompute.loesToDiscoverAggregator)).get();
+		loesToRemove = loesToDiscover == PathfinderEdgeType.INTERFRAGMENT_EDGE ? 
+				PathfinderEdgeType.INTERFRAGMENT_EDGE : PathfinderEdgeType.UNASSIGNED;
 	}
 
-	public boolean compute(){
-		//		if(master.getSuperstep() == 0){
-		//			counter++;
-		//			return false;
-		//		}
-		if(counter == 0){
-			counter++;
-			master.setComputation(LOEDiscoveryTEST.class);
-			return false;
-		}else if(counter == 1){
-			master.setComputation(LOEDiscoveryTEST_REPLY.class);
-			counter++;
-			return false;
-		}else if(counter == 2){
-			master.setComputation(LOEDiscoveryREPORT_GENERATION.class);
-			counter++;
-			return false;
-		}else if(counter == 3){
-			master.setComputation(LOEDiscoveryREPORT_DELIVERY.class);
-			counter++;
-			return false;
-		}else if(counter == 4)
-			counter = 0;
-		return true;
-	}
+
+
 
 	/**
 	 * @author spark
 	 *
 	 */
-	public static class LOEDiscoveryTEST extends PathfinderComputation<ControlledGHSMessage, ControlledGHSMessage> {
+	public static class LOEDiscoveryTEST  extends LOEDiscoveryComputation{
 
-		Logger log = Logger.getLogger(this.getClass());
 
 		/* (non-Javadoc)
 		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
@@ -82,17 +70,15 @@ public class LOEDiscovery {
 		@Override
 		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
 				Iterable<ControlledGHSMessage> messages) throws IOException {
+			super.compute(vertex, messages);
+
 			PathfinderVertexType vertexValue = vertex.getValue();
-			if(vertex.getNumEdges() == 0)
-				vertexValue.loesDepleted();
 
 			vertexValue.resetLOE();
-			Toolbox.disarmPathfinderCandidates(vertex);
-			
-			if(vertexValue.hasLOEsDepleted())
-				return;
+			Toolbox.disarmPathfinderCandidates(vertex, loesToRemove);
 
-			super.compute(vertex, messages);
+			if(vertexValue.hasLOEsDepleted() || !vertexValue.boruvkaStatus())
+				return;
 
 			if(vertex.getNumEdges() == 1){
 				PathfinderVertexID neighbor = vertex.getEdges().iterator().next().getTargetVertexId().copy();
@@ -105,38 +91,18 @@ public class LOEDiscovery {
 			//			PathfinderVertexID selectedNeighbor = null;
 			Stack<PathfinderVertexID> loes = null;
 
-			//			if(vertexValue.getLOE() == Double.MAX_VALUE){
-			//				PathfinderVertexID popped = Toolbox.popPathfinderCandidates(vertex); //check for candidates first
-			//
-			//				if(popped != null){													
-			//					selectedNeighbor = popped;
-			//					vertexValue.updateLOE(vertex.getEdgeValue(selectedNeighbor).get());
-			//				}else{																//Check for unassigned
-			loes = Toolbox.getLOEsForVertex(vertex);
+			//Check for unassigned
+			loes = Toolbox.getLOEsForVertex(vertex, loesToDiscover);
 
 			if(loes == null){
 				log.info("depleted loes!");
 				vertexValue.loesDepleted();
+				if(loesToDiscover == PathfinderEdgeType.INTERFRAGMENT_EDGE)
+					vertexValue.deactivateForBoruvka();
 				return;
 			}
 
 			log.info("available loes " + loes.size());
-
-			//					selectedNeighbor = loes.peek();			
-			//					vertexValue.setLoeDestination(selectedNeighbor);
-			//					vertexValue.updateLOE(vertex.getEdgeValue(selectedNeighbor).get());
-
-			//					if(loes.size() > 0){
-			//						Toolbox.setEdgeAsPathfinderCandidate(vertex, selectedNeighbor);
-			//						for(PathfinderVertexID pfid : loes)
-			//							Toolbox.setEdgeAsPathfinderCandidate(vertex, pfid);
-			//					}
-			//				}
-			//			}else{																//recycle last found neighbor
-			//				selectedNeighbor = vertexValue.getLoeDestination(); //SELECTED NEIGHBORS SHOULD BE SAVED AS WELL IN THE VERTEX TYPE
-			//			}
-
-			//			log.info("selected " + selectedNeighbor + " testing now with fragment " + vertexValue.getFragmentIdentity());
 
 			for(PathfinderVertexID candidate : loes){ //on all edges with same weight a test message is sent
 				log.info("sending test message to " + candidate.get());
@@ -146,9 +112,10 @@ public class LOEDiscovery {
 								ControlledGHSMessage.TEST_MESSAGE));
 			}
 		}
+
 	}
 
-	public static class LOEDiscoveryTEST_REPLY extends PathfinderComputation<ControlledGHSMessage, ControlledGHSMessage>{
+	public static class LOEDiscoveryTEST_REPLY extends LOEDiscoveryComputation{
 
 		/* (non-Javadoc)
 		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
@@ -176,15 +143,7 @@ public class LOEDiscovery {
 						log.info("refused fragment from " + currentSenderID + " removing dge now");
 						sendMessage(currentSenderID.copy(), 
 								new ControlledGHSMessage(vertexId.copy(), ControlledGHSMessage.REFUSE_MESSAGE));
-						//						if(vertexValue.getLoeDestination().equals(currentSenderID)){
-						//							vertexValue.resetLOE();
-						//							Toolbox.disarmPathfinderCandidates(vertex);
-						//						}
-						//						if(!vertex.getEdgeValue(currentSenderID).isPathfinderCandidate())
 						removeEdgesRequest(vertexId, currentSenderID);
-						//						else{
-						//							Toolbox.consolidatePathfinder(vertex, currentSenderID);
-						//						}
 					}
 				}else if(currentMessageCode == ControlledGHSMessage.FORCE_ACCEPT){
 					Toolbox.setEdgeAsBranch(vertex, currentMessage.getSenderID());
@@ -193,7 +152,7 @@ public class LOEDiscovery {
 		}		
 	}
 
-	public static class LOEDiscoveryREPORT_GENERATION extends PathfinderComputation<ControlledGHSMessage, ControlledGHSMessage>{
+	public static class LOEDiscoveryREPORT_GENERATION extends LOEDiscoveryComputation{
 
 		/* (non-Javadoc)
 		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
@@ -220,10 +179,7 @@ public class LOEDiscovery {
 				switch(currentMessageCode){
 				case ControlledGHSMessage.REFUSE_MESSAGE:
 					log.info("Received a refuse message from " + senderID + " removing edge now");
-					//					if(!vertex.getEdgeValue(senderID).isPathfinderCandidate())
 					removeEdgesRequest(vertexId, senderID); 
-					//					vertexValue.resetLOE(); 
-					//					Toolbox.disarmPathfinderCandidates(vertex);
 					break;						
 				case ControlledGHSMessage.ACCEPT_MESSAGE:
 
@@ -268,7 +224,7 @@ public class LOEDiscovery {
 		}	
 	}
 
-	public static class LOEDiscoveryREPORT_DELIVERY extends PathfinderComputation<ControlledGHSMessage, ControlledGHSMessage> {
+	public static class LOEDiscoveryREPORT_DELIVERY extends LOEDiscoveryComputation {
 
 		/* (non-Javadoc)
 		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
@@ -298,7 +254,6 @@ public class LOEDiscovery {
 					minLOEDestination = currentSenderID;
 				}
 			}
-			log.info("manifacturing delivery " + vertexValue.getLOE() + " min " + minLOE);
 			if(vertexValue.getLOE() != Double.MAX_VALUE && vertexValue.getLOE() <= minLOE){
 				//				Toolbox.armPathfinderCandidates(vertex);
 				minLOE = vertexValue.getLOE();
@@ -308,27 +263,24 @@ public class LOEDiscovery {
 				//				vertex.getEdgeValue(minLOEDestination).setAsBranchEdge();
 				//				log.info("Connected " + minLOEDestination);
 			}else{
-				Toolbox.disarmPathfinderCandidates(vertex);
+				Toolbox.disarmPathfinderCandidates(vertex, loesToRemove);
 				vertexValue.updateLOE(minLOE);
 				vertexValue.setLoeDestination(minLOEDestination);
 			}
 			if(minLOE != Double.MAX_VALUE){
-				log.info("sending connect message to " + minLOEDestination);
+				log.info("sending connect message to " + minLOEDestination + " value" + minLOE);
 				sendMessage(minLOEDestination, new ControlledGHSMessage(vertexId, vertexValue.getFragmentIdentity(), ControlledGHSMessage.CONNECT_MESSAGE));
 				aggregate(MSTPathfinderMasterCompute.cGHSProcedureCompletedAggregator, new BooleanWritable(false));
 
-				Iterable<PathfinderVertexID> branches = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH);
+				Collection<PathfinderVertexID> branches = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH);
 
 				if(branches != null)
 					for(PathfinderVertexID e : branches)
 						if(!e.equals(minLOEDestination))
 							sendMessage(e, new ControlledGHSMessage(vertexId, ControlledGHSMessage.REFUSE_MESSAGE));
 			}
-			//else
-			//				log.info("Aggregated a true mannaggia");
-			//			vertexValue.resetLOE();
 		}		
 	}
-
-
 }
+
+

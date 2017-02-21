@@ -205,6 +205,10 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	public void loesDepleted() {
 		this.loesDepleted = true;
 	}
+	
+	public void resetLOEDepleted(){
+		this.loesDepleted = false;
+	}
 
 
 
@@ -215,12 +219,14 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 		return boruvkaStatus;
 	}
 
-
+	public void reactivateForBoruvka(){
+		this.boruvkaStatus = true;
+	}
 
 	/**
 	 * @param boruvkaStatus the boruvkaStatus to set
 	 */
-	public void setInactive() {
+	public void deactivateForBoruvka() {
 		this.boruvkaStatus = false;
 	}
 
