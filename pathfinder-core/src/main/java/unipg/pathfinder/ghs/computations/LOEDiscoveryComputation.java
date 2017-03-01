@@ -159,7 +159,7 @@ public abstract class LOEDiscoveryComputation extends PathfinderComputation<Cont
 						sendMessage(currentSenderID.copy(), 
 								new ControlledGHSMessage(vertexId.copy(), vertexValue.getFragmentIdentity(), ControlledGHSMessage.ACCEPT_MESSAGE)); //all accept edges will receive also the 
 					}else{ //connection refused																										//neighboring fragment ID
-						log.info("refused fragment from " + currentSenderID + " removing edge now");
+						log.info("refused fragment from " + currentSenderID + " removing edge from " + vertex.getId() + " to " + currentSenderID);
 						//						getContext().getCounter(MSTPathfinderMasterCompute.counterGroup, MSTPathfinderMasterCompute.prunedCounter).increment(1);
 						sendMessage(currentSenderID.copy(), 
 								new ControlledGHSMessage(vertexId.copy(), ControlledGHSMessage.REFUSE_MESSAGE));
@@ -202,7 +202,7 @@ public abstract class LOEDiscoveryComputation extends PathfinderComputation<Cont
 				short currentMessageCode = currentMessage.getStatus();
 				switch(currentMessageCode){
 				case ControlledGHSMessage.REFUSE_MESSAGE:
-					log.info("Received a refuse message from " + senderID + " removing edge now");
+					log.info("Received a refuse message from " + senderID + " removing from " + vertex.getId() + " to " + senderID);
 					removeEdgesRequest(vertexId, senderID); 
 					break;						
 				case ControlledGHSMessage.ACCEPT_MESSAGE:

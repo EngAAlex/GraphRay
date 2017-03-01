@@ -90,7 +90,7 @@ public class EdgeConnectionRoutine{
 			PathfinderVertexID vertexId = vertex.getId();
 			//			PathfinderVertexID myLOEDestination = vertexValue.getLoeDestination();
 			PathfinderVertexID myfragmentIdentity = vertexValue.getFragmentIdentity();			
-			PathfinderVertexID selectedFragment = null;
+			PathfinderVertexID selectedFragment = vertexValue.getLoeDestinationFragment();
 
 			HashSet<PathfinderVertexID> connections = new HashSet<PathfinderVertexID>();
 
@@ -151,7 +151,7 @@ public class EdgeConnectionRoutine{
 						vertexValue.setPingedByRoot(true);
 //						if(vertexValue.getLoeDestinationFragment().equals(targetFragment))
 //							selectedFragment = targetFragment.copy();						
-						selectedFragment = vertexValue.getLoeDestinationFragment();
+//						selectedFragment = vertexValue.getLoeDestinationFragment();
 					}
 				}
 			}
