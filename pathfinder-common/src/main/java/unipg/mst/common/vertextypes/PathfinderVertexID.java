@@ -108,7 +108,23 @@ public class PathfinderVertexID extends LongWritable {
 //		public void setByteValue(short value) {
 //			this.value = value;
 //		}
+		
+		/* (non-Javadoc)
+		 * @see org.apache.hadoop.io.LongWritable#equals(java.lang.Object)
+		 */
+		@Override
+		public boolean equals(Object o) {
+			return super.equals(o);
+		}
 
+		/* (non-Javadoc)
+		 * @see org.apache.hadoop.io.LongWritable#hashCode()
+		 */
+		@Override
+		public int hashCode() {
+			return super.hashCode();
+		}
+		
 		/**
 		 * @return the depth
 		 */

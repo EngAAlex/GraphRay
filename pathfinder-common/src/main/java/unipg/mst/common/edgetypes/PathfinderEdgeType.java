@@ -14,6 +14,7 @@ public class PathfinderEdgeType extends DoubleWritable {
 	public static final short INTERFRAGMENT_EDGE = 3;
 	public static final short DUMMY = 4;
 	public static final short PATHFINDER = 5;
+	public static final short FIXED = 6;	
 	
 	public static final String[] CODE_STRINGS = new String[]{"UNASSIGNED",
 															"BRANCH",

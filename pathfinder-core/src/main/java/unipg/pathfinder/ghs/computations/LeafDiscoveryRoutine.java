@@ -72,7 +72,7 @@ public class LeafDiscoveryRoutine {
 
 			vertexValue.setFragmentIdentity(null);
 			
-			log.info("I have " + vertexValue.noOfBranches() + " branches");
+//			log.info("I have " + vertexValue.noOfBranches() + " branches");
 			
 			vertexValue.resetDepth();
 
@@ -81,7 +81,7 @@ public class LeafDiscoveryRoutine {
 //				return;
 //			}
 
-			Collection<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH, PathfinderEdgeType.INTERFRAGMENT_EDGE);				
+			Collection<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH/*, PathfinderEdgeType.INTERFRAGMENT_EDGE*/);				
 			//			if(vertexValue.getDepth() == -1){
 			if(destinations != null && destinations.size() == 1){
 				log.info("sending leaf message");
@@ -113,7 +113,7 @@ public class LeafDiscoveryRoutine {
 				//					sendMessageToMultipleEdges(destinations, new PathfinderVertexIDWithByte(vertex.getId().copy(), (byte) 0));
 				//				}else 
 				sendMessageToMultipleEdges(Toolbox.getSpecificEdgesForVertex(
-						vertex, PathfinderEdgeType.BRANCH, PathfinderEdgeType.INTERFRAGMENT_EDGE).iterator(), new PathfinderVertexIDWithShortValue(vertex.getId(), (short) 1));
+						vertex, PathfinderEdgeType.BRANCH/*, PathfinderEdgeType.INTERFRAGMENT_EDGE*/).iterator(), new PathfinderVertexIDWithShortValue(vertex.getId(), (short) 1));
 			}else
 				return;
 		}		

@@ -21,6 +21,7 @@ public class ControlledGHSMessage extends DoubleWritable{
 	PathfinderVertexID fragmentID;
 	short status;
 	
+	public static final short ROOT_STATUS = 21;
 	public static final short ROOT_UPDATE = 20;
 	
 	public static final short LEAF_DISCOVERY = 10;
@@ -29,6 +30,10 @@ public class ControlledGHSMessage extends DoubleWritable{
 	
 	public static final short FORCE_ACCEPT = 6;
 	public static final short LOEs_DEPLETED = 5;
+	public static final short CONNECT_AS_BRANCH = 42;	
+	public static final short CONNECT_REPLY = 41;		
+	public static final short CONNECT_TEST = 40;	
+	public static final short CONNECT_FROM_ROOT_MESSAGE = 400;	
 	public static final short CONNECT_MESSAGE = 4;	
 	public static final short REPORT_MESSAGE = 3;
 	public static final short ACCEPT_MESSAGE = 2;

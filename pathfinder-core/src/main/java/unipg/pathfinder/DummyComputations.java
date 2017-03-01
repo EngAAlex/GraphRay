@@ -14,6 +14,7 @@ import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.messagetypes.ControlledGHSMessage;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
+import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
 
 public class DummyComputations {
 
@@ -38,6 +39,8 @@ public class DummyComputations {
 					log.info("Deleted");
 					removeEdgesRequest(vertex.getId(), current.getTargetVertexId().copy());
 				}
+//				else if(current.getValue().isPathfinder())
+//					getContext().getCounter(MSTPathfinderMasterCompute.counterGroup, MSTPathfinderMasterCompute.pathfinderCounter).increment(1);
 			}
 		}
 	}
@@ -51,11 +54,11 @@ public class DummyComputations {
 		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
 				Iterable<ControlledGHSMessage> messages) throws IOException {
 			super.compute(vertex, messages);
-			Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();			
-			while(edges.hasNext()){
-				Edge<PathfinderVertexID, PathfinderEdgeType> current = edges.next();
-				log.info("Final sweep Edge " + current.getTargetVertexId() + " " + PathfinderEdgeType.CODE_STRINGS[current.getValue().getStatus()]);
-			}
+//			Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();			
+//			while(edges.hasNext()){
+//				Edge<PathfinderVertexID, PathfinderEdgeType> current = edges.next();
+////				log.info("Final sweep Edge " + current.getTargetVertexId() + " " + PathfinderEdgeType.CODE_STRINGS[current.getValue().getStatus()]);
+//			}
 			vertex.voteToHalt();
 		}
 		

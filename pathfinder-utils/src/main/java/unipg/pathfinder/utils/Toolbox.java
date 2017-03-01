@@ -19,6 +19,7 @@ import org.apache.log4j.Logger;
 import unipg.mst.common.edgetypes.PathfinderEdgeType;
 import unipg.mst.common.vertextypes.PathfinderVertexID;
 import unipg.mst.common.vertextypes.PathfinderVertexType;
+import unipg.pathfinder.common.writables.SetWritable;
 
 /**
  * @author spark
@@ -61,6 +62,7 @@ public class Toolbox {
 			}else if(currentEdgeValue == min)
 				loes.push(currentNeighbor.copy());			
 		}
+		vertex.getValue().updateLOE(min);
 		return loes;
 	}
 
@@ -90,6 +92,17 @@ public class Toolbox {
 			}
 		}		
 	}
+	
+	@SuppressWarnings("unchecked")
+	public static void armFragmentPathfinderCandidates(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, PathfinderVertexID edgesToActivate) throws IOException{
+		Iterator<PathfinderVertexID> edges = vertex.getValue().getRecipientsForFragment(edgesToActivate).iterator();
+		while(edges.hasNext()){
+			PathfinderVertexID current = edges.next();
+			if(vertex.getEdgeValue(current).getStatus() == PathfinderEdgeType.PATHFINDER_CANDIDATE){
+				updateEdgeValueWithStatus(vertex, PathfinderEdgeType.PATHFINDER, current);
+			}
+		}		
+	}
 
 	public static void armRemotePathfinderCandidates(AbstractComputation computation, Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex) throws IOException{
 		Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();
@@ -98,10 +111,7 @@ public class Toolbox {
 			if(current.getValue().getStatus() == PathfinderEdgeType.PATHFINDER_CANDIDATE){
 				PathfinderVertexID remoteID = current.getTargetVertexId().copy();
 				updateEdgeValueWithStatus(vertex, PathfinderEdgeType.PATHFINDER, remoteID);
-				log.info("Arming remote pathfinder " + remoteID + " to " + vertex.getId());
-				computation.removeEdgesRequest(remoteID, vertex.getId());
-				computation.addEdgeRequest(remoteID,
-						EdgeFactory.create(vertex.getId(), new PathfinderEdgeType(current.getValue().get(), PathfinderEdgeType.PATHFINDER)));
+				updateRemoteEdgeWithStatus(computation, vertex.getId(), remoteID, current.getValue(), PathfinderEdgeType.PATHFINDER);
 			}
 		}		
 	}
@@ -128,7 +138,8 @@ public class Toolbox {
 	 */
 	public static void setEdgeAsBranch(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, PathfinderVertexID currentSenderID) {
 		vertex.getValue().addBranch();
-		updateEdgeValueWithStatus(vertex, PathfinderEdgeType.BRANCH, currentSenderID);	
+		if(!vertex.getEdgeValue(currentSenderID).isBranch())
+			updateEdgeValueWithStatus(vertex, PathfinderEdgeType.BRANCH, currentSenderID);	
 	}		
 
 	/**
@@ -144,19 +155,19 @@ public class Toolbox {
 		updateEdgeValueWithStatus(vertex, PathfinderEdgeType.PATHFINDER, currentSenderID);	
 	}
 
-	public static void updateEdgeValueWithStatus(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short newStatus, PathfinderVertexID recipient){
-		PathfinderEdgeType pet = vertex.getEdgeValue(recipient);
-		//		pet.setStatus(newStatus);
-		log.info("Setting edge from " + vertex.getId().get() + " to " + recipient.get() + " as " + PathfinderEdgeType.CODE_STRINGS[newStatus]);
-		vertex.setEdgeValue(recipient, new PathfinderEdgeType(pet.get(), newStatus));		
-	}
-
 	public static void setMultipleEdgesAsCandidates(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, Iterable<PathfinderVertexID> recipients){
 		updateMultipleEdgeValueWithStatus(vertex, PathfinderEdgeType.PATHFINDER_CANDIDATE, recipients);
 	}
 
 	public static void setMultipleEdgesAsInterfragment(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, Iterable<PathfinderVertexID> recipients){
 		updateMultipleEdgeValueWithStatus(vertex, PathfinderEdgeType.INTERFRAGMENT_EDGE, recipients);
+	}
+
+	public static void updateEdgeValueWithStatus(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short newStatus, PathfinderVertexID recipient){
+		PathfinderEdgeType pet = vertex.getEdgeValue(recipient);
+		//		pet.setStatus(newStatus);
+		log.info("Setting edge from " + vertex.getId().get() + " to " + recipient.get() + " as " + PathfinderEdgeType.CODE_STRINGS[newStatus]);
+		vertex.setEdgeValue(recipient, new PathfinderEdgeType(pet.get(), newStatus));		
 	}
 
 	public static void updateMultipleEdgeValueWithStatus(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short newStatus, Iterable<PathfinderVertexID> recipients){
@@ -167,5 +178,51 @@ public class Toolbox {
 				//			pet.setStatus(newStatus);
 				//			vertex.setEdgeValue(recipient, pet);		
 			}
+	}
+
+	@SuppressWarnings("rawtypes")
+	public static void updateRemoteEdgeWithStatus(AbstractComputation computation, PathfinderVertexID sourceID, PathfinderVertexID remoteID, PathfinderEdgeType existingEdge, short status) throws IOException{
+		log.info("Updating remote " + remoteID + " from " + sourceID + " as " + PathfinderEdgeType.CODE_STRINGS[status]);
+		computation.removeEdgesRequest(remoteID, sourceID);
+		PathfinderEdgeType newEdge = existingEdge.copy();
+		newEdge.setStatus(status);
+		computation.addEdgeRequest(remoteID,
+				EdgeFactory.create(sourceID, newEdge));		
+	}
+
+	public static void connectWithDummies(AbstractComputation computation, Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, PathfinderVertexID fragmentToConnect) throws IOException{
+		if(vertex.getEdgeValue(fragmentToConnect) == null){
+			computation.addEdgeRequest(vertex.getId(), EdgeFactory.create(fragmentToConnect, new PathfinderEdgeType(PathfinderEdgeType.DUMMY))); //new pair is created
+			computation.addEdgeRequest(fragmentToConnect, EdgeFactory.create(vertex.getId(), new PathfinderEdgeType(PathfinderEdgeType.DUMMY)));
+		}
+	}
+
+	@SuppressWarnings("rawtypes")
+	public static void removeExistingDummies(AbstractComputation computation, Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, PathfinderVertexID fragmentToConnect) throws IOException{
+		if(vertex.getEdgeValue(fragmentToConnect) != null && vertex.getEdgeValue(fragmentToConnect).isDummy()){
+			computation.removeEdgesRequest(vertex.getId(), fragmentToConnect);
+			computation.removeEdgesRequest(fragmentToConnect, vertex.getId());
+		}
+	}
+
+	/**
+	 * @param branchConnector
+	 * @param id
+	 * @param selectedNeighbor
+	 * @throws IOException 
+	 */
+	public static void setRemoteEdgeAsBranch(AbstractComputation computation, PathfinderVertexID id, PathfinderEdgeType existingEdge,
+			PathfinderVertexID selectedNeighbor) throws IOException {
+		updateRemoteEdgeWithStatus(computation, id, selectedNeighbor, existingEdge, PathfinderEdgeType.BRANCH);
+	}
+
+	/**
+	 * 
+	 */
+	public static void removeSetFromActiveFragmentStack(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, PathfinderVertexID fragmentToRemove, short statusToRestore) {
+		SetWritable<PathfinderVertexID> toRemove = vertex.getValue().popSetOutOfStack(fragmentToRemove);
+		if(toRemove != null)
+			Toolbox.updateMultipleEdgeValueWithStatus(vertex, statusToRestore, toRemove);
+//		
 	}
 }

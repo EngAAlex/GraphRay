@@ -6,10 +6,9 @@ package unipg.pathfinder.ghs.masters;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.hadoop.io.BooleanWritable;
 
+import unipg.pathfinder.ghs.computations.EdgeConnectionRoutine;
 import unipg.pathfinder.ghs.computations.LeafDiscoveryRoutine;
 import unipg.pathfinder.ghs.computations.MISRoutine;
-import unipg.pathfinder.ghs.computations.GHSComputations.LOEConnection;
-import unipg.pathfinder.ghs.computations.GHSComputations.LOEConnectionEncore;
 import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
 
 /**
@@ -19,9 +18,10 @@ import unipg.pathfinder.masters.MSTPathfinderMasterCompute;
 public class GHSMaster {
 
 	MasterCompute master;
+	LOEDiscoveryMaster lD;	
+	EdgeConnectionRoutine ecr;
 	LeafDiscoveryRoutine ldr;
 	MISRoutine mr;
-	LOEDiscoveryMaster lD;
 	boolean setup = true;
 	int counter = 0;
 
@@ -30,9 +30,10 @@ public class GHSMaster {
 	/**
 	 * 
 	 */
-	public GHSMaster(MasterCompute master, LOEDiscoveryMaster lD) {
+	public GHSMaster(MasterCompute master, LOEDiscoveryMaster lD, EdgeConnectionRoutine ecr) {
 		this.master = master;
 		this.lD = lD;
+		this.ecr = ecr;
 		ldr = new LeafDiscoveryRoutine(master);
 		mr = new MISRoutine(master);
 	}
@@ -43,25 +44,23 @@ public class GHSMaster {
 				if(((BooleanWritable)master.getAggregatedValue(MSTPathfinderMasterCompute.cGHSProcedureCompletedAggregator)).get())
 					return true;
 				else{
-					master.setComputation(LOEConnection.class);
+					master.getContext().getCounter(MSTPathfinderMasterCompute.counterGroup, MSTPathfinderMasterCompute.cGHSrounds).increment(1);
+					//					master.setComputation(LOEConnection.class);
+					ecr.compute();
 					counter++;
 					return false;
 				}
 			}
 		}else if(counter == 1){
-			master.setComputation(LOEConnectionEncore.class);
-			counter++;
-			return false;			
-		}else if(counter == 2){
-//			if(firstConnection){
-//				firstConnection = false;
-//				mr.compute();
-//				counter = 4;
-//			}else{
-				counter++;			
-//				if(((BooleanWritable)master.getAggregatedValue(MSTPathfinderMasterCompute.messagesLeftAggregator)).get())
-					ldr.compute();
-//			}
+			//			master.setComputation(LOEConnectionEncore.class);
+			if(ecr.compute())
+				counter++;
+//			else
+//				return false;			
+		}
+		if(counter == 2){
+			counter++;			
+			ldr.compute();
 		}else if(counter == 3)	{
 			if(ldr.compute())
 				counter++;										
@@ -71,5 +70,3 @@ public class GHSMaster {
 		return false;
 	}
 }
-
-

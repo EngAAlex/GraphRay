@@ -10,6 +10,7 @@ import java.util.Iterator;
 
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.master.MasterCompute;
+import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Writable;
 
@@ -44,14 +45,18 @@ public class MISRoutine {
 			counter++;
 			return false;
 		}else if(counter == 2){
-			master.setComputation(FragmentReconstructionPing.class);
+			master.setComputation(MISCompletion.class);
 			counter++;
 			return false;
 		}else if(counter == 3){
-				master.setComputation(FragmentReconstructionReply.class);
-				counter++;
-				return false;
+			master.setComputation(FragmentReconstructionPing.class);
+			counter++;
+			return false;
 		}else if(counter == 4){
+			master.setComputation(FragmentReconstructionReply.class);
+			counter++;
+			return false;
+		}else if(counter == 5){
 			master.setComputation(FragmentReconstructionCompletion.class);
 			counter = 0;			
 		}	
@@ -68,10 +73,10 @@ public class MISRoutine {
 				Iterable<Writable> messages) throws IOException {
 			super.compute(vertex, messages);
 			PathfinderVertexType vertexValue = vertex.getValue();
-//			if(vertexValue.isIsolated()){
-//				vertexValue.setRoot(true);
-//				return;
-//			}
+			//			if(vertexValue.isIsolated()){
+			//				vertexValue.setRoot(true);
+			//				return;
+			//			}
 
 			log.info("Starting MIS procedure. My depth " + vertexValue.getDepth());
 
@@ -83,7 +88,7 @@ public class MISRoutine {
 			if(vertexValue.getDepth() == -1){ 
 				vertexValue.setMISValue(Math.random());
 				log.info("MIS Ping");
-				Iterable<PathfinderVertexID> targets = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH, PathfinderEdgeType.INTERFRAGMENT_EDGE);
+				Iterable<PathfinderVertexID> targets = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH/*, PathfinderEdgeType.INTERFRAGMENT_EDGE*/);
 				if(targets != null)
 					sendMessageToMultipleEdges(targets.iterator(), new DoubleValueAndShortDepth(vertexValue.getMISValue(), vertexValue.getDepth()));
 			}
@@ -92,7 +97,7 @@ public class MISRoutine {
 		}		
 	}
 
-	public static class MISReply extends PathfinderComputation<DoubleValueAndShortDepth, DoubleWritable>{
+	public static class MISReply extends PathfinderComputation<DoubleValueAndShortDepth, BooleanWritable>{
 
 		/* (non-Javadoc)
 		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
@@ -103,9 +108,9 @@ public class MISRoutine {
 			super.compute(vertex, messages);
 			PathfinderVertexType vertexValue = vertex.getValue();
 			int vertexDepth = vertexValue.getDepth();
+			boolean foundSmaller = false;			
 			if(vertexDepth != -1 /*|| vertexValue.isIsolated()*/)
-				return;							
-			boolean foundSmaller = false;
+				return;
 			double myValue = vertexValue.getMISValue();
 			Iterator<DoubleValueAndShortDepth> it = messages.iterator();			
 			while(it.hasNext()){
@@ -114,8 +119,35 @@ public class MISRoutine {
 					break;
 				}
 			}
-			log.info("MIS reply " + (!foundSmaller));
-			vertexValue.setRoot(!foundSmaller);
+			//			vertexValue.setRoot(!foundSmaller);
+
+			if(!foundSmaller){
+				log.info("MIS reply");
+				Iterable<PathfinderVertexID> targets = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH/*, PathfinderEdgeType.INTERFRAGMENT_EDGE*/);
+				if(targets != null)
+					sendMessageToMultipleEdges(targets.iterator(), new BooleanWritable(true));					
+			}
+		}	
+	}
+
+	public static class MISCompletion extends PathfinderComputation<BooleanWritable, DoubleWritable>{
+
+		/* (non-Javadoc)
+		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
+		 */
+		@Override
+		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
+				Iterable<BooleanWritable> messages) throws IOException {
+			super.compute(vertex, messages);
+			PathfinderVertexType vertexValue = vertex.getValue();
+			int vertexDepth = vertexValue.getDepth();
+			if(vertexDepth != -1 /*|| vertexValue.isIsolated()*/)
+				return;							
+			Iterator<BooleanWritable> it = messages.iterator();			
+			if(!it.hasNext()){
+				log.info("I'm the new root");
+				vertexValue.setRoot(true);
+			}
 		}	
 	}
 
@@ -134,7 +166,7 @@ public class MISRoutine {
 			if(vertexValue.isRoot()){
 				PathfinderVertexID fragmentIdentity = vertex.getId();
 				vertexValue.setFragmentIdentity(fragmentIdentity);
-				Iterable<PathfinderVertexID> targets = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH, PathfinderEdgeType.INTERFRAGMENT_EDGE);
+				Iterable<PathfinderVertexID> targets = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH/*, PathfinderEdgeType.INTERFRAGMENT_EDGE*/);
 				log.info("I am the new root");
 				if(targets != null){	
 					//					vertexValue.setBranches(((HashSet)targets).size());
@@ -161,32 +193,41 @@ public class MISRoutine {
 			Iterator<PathfinderVertexID> msgs = messages.iterator();
 			PathfinderVertexID selectedIdentity = null;
 			while(msgs.hasNext()){
-				PathfinderVertexID newIdentity = msgs.next().copy();
+				PathfinderVertexID newIdentity = msgs.next();
 				if(vertexValue.isRoot()){
 					Toolbox.setEdgeAsInterFragmentEdge(vertex, newIdentity);
 				}else{
 					if(vertexValue.getFragmentIdentity() == null || vertexValue.getFragmentIdentity().get() < newIdentity.get()){
-						selectedIdentity = newIdentity;
+						selectedIdentity = newIdentity.copy();
 					}
 				}
 			}
-			if(selectedIdentity != null)
+			if(selectedIdentity != null){
+				log.info("Selected new identity " + selectedIdentity);
 				reconstructFragment(vertex, selectedIdentity);
+			}else if(!vertexValue.isRoot()){
+				log.info("No new identity received, reverting to single root");
+				vertexValue.setFragmentIdentity(vertex.getId());
+				//				vertexValue.setRoot(true);
+				Toolbox.setMultipleEdgesAsInterfragment(vertex, Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH));
+			}
 		}
-		
+
 		private void reconstructFragment(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, PathfinderVertexID newIdentity){
 			PathfinderVertexType vertexValue = vertex.getValue();
 			log.info("Received new fragment identity " + newIdentity);						
 			vertexValue.setFragmentIdentity(newIdentity);
 			vertexValue.resetDepth();
-			Toolbox.setMultipleEdgesAsInterfragment(vertex, Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH));
-			Toolbox.setEdgeAsBranch(vertex, newIdentity);
+			Collection<PathfinderVertexID> toRevertToInterfragment = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH);
+			toRevertToInterfragment.remove(newIdentity);
+			Toolbox.setEdgeAsBranch(vertex, newIdentity);			
+			Toolbox.setMultipleEdgesAsInterfragment(vertex, toRevertToInterfragment);
 			sendMessage(newIdentity, new PathfinderVertexID(vertex.getId()));
 		}
 	}
-	
+
 	public static class FragmentReconstructionCompletion extends PathfinderComputation<PathfinderVertexID, ControlledGHSMessage>{
-		
+
 		/* (non-Javadoc)
 		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
 		 */
@@ -206,13 +247,13 @@ public class MISRoutine {
 				newBranches.add(current);
 				Toolbox.setEdgeAsBranch(vertex, current);				
 			}
-			if(newBranches != null)
-				originalBranches.removeAll(newBranches);
-			if(originalBranches != null)
+			if(originalBranches != null){
+				if(newBranches != null)
+					originalBranches.removeAll(newBranches);				
 				Toolbox.setMultipleEdgesAsInterfragment(vertex, originalBranches);
-			
-		}
-		
-	}
+			}
 
+		}
+
+	}
 }

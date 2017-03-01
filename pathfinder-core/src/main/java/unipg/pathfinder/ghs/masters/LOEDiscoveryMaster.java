@@ -6,6 +6,7 @@ package unipg.pathfinder.ghs.masters;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.log4j.Logger;
 
+import unipg.pathfinder.ghs.computations.LOEDiscoveryComputation.LOEDiscoveryCleanup;
 import unipg.pathfinder.ghs.computations.LOEDiscoveryComputation.LOEDiscoveryREPORT_DELIVERY;
 import unipg.pathfinder.ghs.computations.LOEDiscoveryComputation.LOEDiscoveryREPORT_GENERATION;
 import unipg.pathfinder.ghs.computations.LOEDiscoveryComputation.LOEDiscoveryTEST;
@@ -27,12 +28,20 @@ public class LOEDiscoveryMaster {
 		this.master = master;
 	}
 
+	public void repeatDelivery(){
+		counter = 3;
+	}
+	
 	public boolean compute(){
 		//		if(master.getSuperstep() == 0){
 		//			counter++;
 		//			return false;
 		//		}
-		if(counter == 0){
+		if(counter == -1){
+			master.setComputation(LOEDiscoveryCleanup.class);
+			counter++;
+			return false;
+		}else if(counter == 0){
 			counter++;
 			master.setComputation(LOEDiscoveryTEST.class);
 			return false;
@@ -49,7 +58,7 @@ public class LOEDiscoveryMaster {
 			counter++;
 			return false;
 		}else if(counter == 4)
-			counter = 0;
+			counter = -1;
 		return true;
 	}
 
