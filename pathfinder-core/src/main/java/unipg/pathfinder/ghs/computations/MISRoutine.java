@@ -88,7 +88,7 @@ public class MISRoutine {
 			if(vertexValue.getDepth() == -1){ 
 				vertexValue.setMISValue(Math.random());
 				log.info("MIS Ping");
-				Iterable<PathfinderVertexID> targets = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH/*, PathfinderEdgeType.INTERFRAGMENT_EDGE*/);
+				Iterable<PathfinderVertexID> targets = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH, PathfinderEdgeType.INTERFRAGMENT_EDGE);
 				if(targets != null)
 					sendMessageToMultipleEdges(targets.iterator(), new DoubleValueAndShortDepth(vertexValue.getMISValue(), vertexValue.getDepth()));
 			}
@@ -123,7 +123,7 @@ public class MISRoutine {
 
 			if(!foundSmaller){
 				log.info("MIS reply");
-				Iterable<PathfinderVertexID> targets = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH/*, PathfinderEdgeType.INTERFRAGMENT_EDGE*/);
+				Iterable<PathfinderVertexID> targets = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH, PathfinderEdgeType.INTERFRAGMENT_EDGE);
 				if(targets != null)
 					sendMessageToMultipleEdges(targets.iterator(), new BooleanWritable(true));					
 			}

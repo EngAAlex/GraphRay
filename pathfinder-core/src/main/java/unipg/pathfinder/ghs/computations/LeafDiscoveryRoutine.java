@@ -133,6 +133,7 @@ public class LeafDiscoveryRoutine {
 			Iterator<PathfinderVertexIDWithShortValue> msgs = messages.iterator();
 			while(msgs.hasNext()){							
 				PathfinderVertexIDWithShortValue message = msgs.next();
+				log.info("Received leaf message " + message.getPfID() + " value " + message.getDepth());
 				switch(message.getDepth()){
 				case 0:
 					if(depth == -1){

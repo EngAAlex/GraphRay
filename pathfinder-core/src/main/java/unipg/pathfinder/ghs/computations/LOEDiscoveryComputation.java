@@ -185,7 +185,7 @@ public abstract class LOEDiscoveryComputation extends PathfinderComputation<Cont
 			super.compute(vertex, messages);
 			PathfinderVertexID vertexId = vertex.getId();
 			PathfinderVertexType vertexValue = vertex.getValue();
-//			if(vertexValue.hasLOEsDepleted() && !vertexValue.isRoot()){
+//			if(vertexValue.hasLOEsDepleted()/* && !vertexValue.isRoot()*/)/*{*/
 //				sendMessage(vertexValue.getFragmentIdentity(), new ControlledGHSMessage(vertex.getId(), ControlledGHSMessage.LOEs_DEPLETED));
 //				return;
 //			}
@@ -206,6 +206,8 @@ public abstract class LOEDiscoveryComputation extends PathfinderComputation<Cont
 					removeEdgesRequest(vertexId, senderID); 
 					break;						
 				case ControlledGHSMessage.ACCEPT_MESSAGE:
+					if(vertex.getEdgeValue(senderID).isBranch())
+						continue;
 					if(!senderFragmentMap.containsKey(remoteFragment))
 						senderFragmentMap.put(remoteFragment, new SetWritable<PathfinderVertexID>());
 					((SetWritable<PathfinderVertexID>)(senderFragmentMap.get(remoteFragment))).add(senderID.copy());
@@ -214,8 +216,9 @@ public abstract class LOEDiscoveryComputation extends PathfinderComputation<Cont
 					break;
 				case ControlledGHSMessage.ROOT_UPDATE:
 					vertexValue.setFragmentIdentity(remoteFragment);
-					log.info("Updated root after force-accept");					
-					break;
+					log.info("Updated root after force-accept");
+					return;
+					//break;
 				}
 			}
 
