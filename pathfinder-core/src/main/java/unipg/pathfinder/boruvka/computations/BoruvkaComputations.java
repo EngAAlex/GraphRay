@@ -65,7 +65,8 @@ public class BoruvkaComputations {
 			super.compute(vertex, messages);
 			Collection<PathfinderVertexID> destinationsIterable = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.PATHFINDER);
 			if(destinationsIterable != null){
-				sendMessageToMultipleEdges(destinationsIterable.iterator(), new ControlledGHSMessage(vertex.getId(), vertex.getValue().getFragmentIdentity(), ControlledGHSMessage.REPORT_MESSAGE));
+				sendMessageToMultipleEdges(destinationsIterable.iterator(), 
+						new ControlledGHSMessage(vertex.getId(), vertex.getValue().getFragmentIdentity(), ControlledGHSMessage.REPORT_MESSAGE));
 			}
 		}
 
@@ -88,7 +89,7 @@ public class BoruvkaComputations {
 					log.info("updating pathfinder as interfragment edge");
 					PathfinderVertexID remoteID = current.getSenderID().copy();
 					Toolbox.updateEdgeValueWithStatus(vertex, PathfinderEdgeType.INTERFRAGMENT_EDGE, remoteID);
-					Toolbox.updateRemoteEdgeWithStatus(this, vertex.getId(), remoteID, vertex.getEdgeValue(remoteID), PathfinderEdgeType.INTERFRAGMENT_EDGE);
+//					Toolbox.updateRemoteEdgeWithStatus(this, vertex.getId(), remoteID, vertex.getEdgeValue(remoteID), PathfinderEdgeType.INTERFRAGMENT_EDGE);
 				}
 			}
 		}
@@ -112,8 +113,9 @@ public class BoruvkaComputations {
 						Toolbox.connectWithDummies(this, vertex, myFragment);
 					}
 					log.info("LOES not depleted");
-				}else
-					vertexValue.setRoot(false); //the vertex will remain silent from now on				
+				}
+//				else
+//					vertexValue.setRoot(false); //the vertex will remain silent from now on				
 			}else if(vertexValue.isRoot()){
 				log.info("I'm still a root during Boruvka");
 				aggregate(MSTPathfinderMasterCompute.boruvkaProcedureCompletedAggregator, new IntWritable(1));
@@ -270,7 +272,7 @@ public class BoruvkaComputations {
 			vertexValue.setFragmentIdentity(newFragmentID);
 			if(vertex.getEdgeValue(newFragmentID) == null){
 				Toolbox.connectWithDummies(this, vertex, newFragmentID);
-				log.info("Added nwe dummies to " + newFragmentID);
+				log.info("Added new dummies to " + newFragmentID);
 			}
 
 

@@ -94,7 +94,7 @@ public class EdgeConnectionRoutine{
 
 			HashSet<PathfinderVertexID> connections = new HashSet<PathfinderVertexID>();
 
-//			boolean branchConnection = false;
+			//			boolean branchConnection = false;
 
 			while(msgs.hasNext()){
 				ControlledGHSMessage current = msgs.next();
@@ -103,9 +103,7 @@ public class EdgeConnectionRoutine{
 
 				short msgStatus = current.getStatus();
 				if(msgStatus == ControlledGHSMessage.ROOT_UPDATE){
-					log.info("Updating my Boruvka Root with " + msgFragmentIdentity + " using a Root update message");
-					vertexValue.deactivateForBoruvka();
-					vertexValue.setFragmentIdentity(msgFragmentIdentity.copy());
+					rootUpdateMessageReceived(vertexValue, msgFragmentIdentity);
 					return;
 				}			
 
@@ -149,48 +147,54 @@ public class EdgeConnectionRoutine{
 
 					if(vertexValue.isRoot()){
 						vertexValue.setPingedByRoot(true);
-//						if(vertexValue.getLoeDestinationFragment().equals(targetFragment))
-//							selectedFragment = targetFragment.copy();						
-//						selectedFragment = vertexValue.getLoeDestinationFragment();
+						//						if(vertexValue.getLoeDestinationFragment().equals(targetFragment))
+						//							selectedFragment = targetFragment.copy();						
+						//						selectedFragment = vertexValue.getLoeDestinationFragment();
 					}
 				}
 			}
 
 			if(vertexValue.isPingedByRoot() && !connections.isEmpty()){
-//				if(selectedFragment == null)
+				//				if(selectedFragment == null)
 				//				vertexValue.authorizeConnections();
-//				for(PathfinderVertexID pf : connections)
-//					if(!pf.equals(selectedFragment)){
-//						SetWritable<PathfinderVertexID> toRemove = vertexValue.popSetOutOfStack(pf);
-//						Toolbox.updateMultipleEdgeValueWithStatus(vertex, loesToDiscover, toRemove);
-//					}
+				//				for(PathfinderVertexID pf : connections)
+				//					if(!pf.equals(selectedFragment)){
+				//						SetWritable<PathfinderVertexID> toRemove = vertexValue.popSetOutOfStack(pf);
+				//						Toolbox.updateMultipleEdgeValueWithStatus(vertex, loesToDiscover, toRemove);
+				//					}
 
 				if(connections.contains(selectedFragment)/*!vertexValue.isStackEmpty()*/){
 					log.info("Connecting to " + selectedFragment);
 					connect(vertex, selectedFragment);
+					vertexValue.authorizeConnections();
 				}
-			
+
 			}/*else*/
 
 		}
 
 		protected void connect(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, PathfinderVertexID selectedFragment) throws IOException{
 			Toolbox.armFragmentPathfinderCandidates(vertex, selectedFragment);
-			rootUpdateNotification(vertex.getId(), vertex.getValue(), selectedFragment);				
+			if(boruvkaConnection)
+				rootUpdateNotification(vertex.getId(), vertex.getValue(), selectedFragment);				
 			log.info("Connected with " + selectedFragment);
+		}
+		
+		protected void rootUpdateMessageReceived(PathfinderVertexType vertexValue, PathfinderVertexID newRoot){
+			log.info("Updating my Boruvka Root with " + newRoot + " using a Root update message");
+			vertexValue.deactivateForBoruvka();
+			vertexValue.setFragmentIdentity(newRoot.copy());
 		}
 
 		protected void rootUpdateNotification(PathfinderVertexID vertexId, PathfinderVertexType vertexValue, PathfinderVertexID selectedFragment){
-			if(boruvkaConnection){				
-				if(vertexValue.getFragmentIdentity().get() < selectedFragment.get()){
-					if(vertexValue.isRoot()){
-						vertexValue.deactivateForBoruvka();
-						vertexValue.setFragmentIdentity(selectedFragment.copy());
-						log.info("Updating my Boruvka Root with " + vertexValue.getFragmentIdentity().get());						
-					}else{
-						log.info("informed my root " + vertexValue.getFragmentIdentity() + " to change the fragment identity");
-						sendMessage(vertexValue.getFragmentIdentity(), new ControlledGHSMessage(vertexId, selectedFragment.copy(), ControlledGHSMessage.ROOT_UPDATE));
-					}
+			if(vertexValue.getFragmentIdentity().get() < selectedFragment.get()){
+				if(vertexValue.isRoot()){
+					vertexValue.deactivateForBoruvka();
+					vertexValue.setFragmentIdentity(selectedFragment.copy());
+					log.info("Updating my Boruvka Root with " + vertexValue.getFragmentIdentity().get());						
+				}else{
+					log.info("informed my root " + vertexValue.getFragmentIdentity() + " to change the fragment identity");
+					sendMessage(vertexValue.getFragmentIdentity(), new ControlledGHSMessage(vertexId, selectedFragment.copy(), ControlledGHSMessage.ROOT_UPDATE));
 				}
 			}
 		}
@@ -213,7 +217,7 @@ public class EdgeConnectionRoutine{
 	public static class LOEConnectionSurvey extends PathfinderComputation<ControlledGHSMessage, ControlledGHSMessage> {
 
 		protected short loesToDiscover;
-		protected boolean boruvkaConnection;
+//		protected boolean boruvkaConnection;
 		//		protected boolean encore = false;
 
 
@@ -238,13 +242,7 @@ public class EdgeConnectionRoutine{
 				PathfinderVertexID msgSender = current.getSenderID();
 				PathfinderVertexID msgFragmentIdentity = current.getFragmentID();
 
-				short msgStatus = current.getStatus();
-				if(msgStatus == ControlledGHSMessage.ROOT_UPDATE){
-					log.info("Updating my Boruvka Root with " + msgFragmentIdentity + " using a Root update message");
-					vertexValue.deactivateForBoruvka();
-					vertexValue.setFragmentIdentity(msgFragmentIdentity.copy());
-					return;
-				}			
+				short msgStatus = current.getStatus();	
 
 				//				if(vertexValue.isStackEmpty() /*msgStatus == ControlledGHSMessage.REFUSE_MESSAGE || myLOEDestination == null || vertex.getEdgeValue(myLOEDestination).isPathfinder()*/){
 				//					log.info("Received a refuse message or edge already pathfinder or myLOEDestination null");
@@ -310,7 +308,7 @@ public class EdgeConnectionRoutine{
 				CentralizedServiceWorker<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> serviceWorker,
 				WorkerGlobalCommUsage workerGlobalCommUsage) {
 			super.initialize(graphState, workerClientRequestProcessor, serviceWorker, workerGlobalCommUsage);
-			boruvkaConnection = ((IntWritable)getAggregatedValue(MSTPathfinderMasterCompute.loesToDiscoverAggregator)).get() == PathfinderEdgeType.INTERFRAGMENT_EDGE;
+//			boruvkaConnection = ((IntWritable)getAggregatedValue(MSTPathfinderMasterCompute.loesToDiscoverAggregator)).get() == PathfinderEdgeType.INTERFRAGMENT_EDGE;
 			//			messagesToListen = (short) ((IntWritable)getAggregatedValue(MSTPathfinderMasterCompute.testMessages)).get();
 			loesToDiscover = (short) ((IntWritable)getAggregatedValue(MSTPathfinderMasterCompute.loesToDiscoverAggregator)).get();
 		}
@@ -456,7 +454,7 @@ public class EdgeConnectionRoutine{
 		//				sendMessage(vertexValue.getFragmentIdentity(), new ControlledGHSMessage(vertex.getId(), vertexValue.getLoeDestinationFragment(), ControlledGHSMessage.CONNECT_REPLY));
 	}
 
-	public static class BranchConnector extends PathfinderComputation<ControlledGHSMessage, ControlledGHSMessage> {
+	public static class BranchConnector extends LOEConnection {
 
 		/* (non-Javadoc)
 		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
@@ -466,12 +464,25 @@ public class EdgeConnectionRoutine{
 				Iterable<ControlledGHSMessage> messages) throws IOException {
 			super.compute(vertex, messages);
 			PathfinderVertexType vertexValue = vertex.getValue();
-			if(!vertexValue.isBranchConnectionEnabled())
+			if(vertexValue.isRoot()){
+				PathfinderVertexID receivedNewPfid = null;
+				Iterator<ControlledGHSMessage> msgs = messages.iterator();
+				while(msgs.hasNext()){
+					PathfinderVertexID msgsFragmentID = msgs.next().getFragmentID();
+					if(receivedNewPfid == null)
+						receivedNewPfid = msgsFragmentID;
+					else if(!receivedNewPfid.equals(msgsFragmentID))
+						throw new IOException("Two different IDS for Boruvka root update!");
+				}
+				if(receivedNewPfid != null)
+					rootUpdateMessageReceived(vertexValue, receivedNewPfid);
+			}
+			if(!vertexValue.isClearedForConnection() || !vertexValue.isBranchConnectionEnabled())
 				return;
-//			if(vertexValue.stackSize() != 1)
-//				throw new IOException("Stack size for branch connection != 1");
-//			PathfinderVertexID selectedNeighbor = vertexValue.popSetOutOfStack(
-//					(PathfinderVertexID) vertexValue.getActiveFragments().iterator().next()).pop().copy();
+			//			if(vertexValue.stackSize() != 1)
+			//				throw new IOException("Stack size for branch connection != 1");
+			//			PathfinderVertexID selectedNeighbor = vertexValue.popSetOutOfStack(
+			//					(PathfinderVertexID) vertexValue.getActiveFragments().iterator().next()).pop().copy();
 			PathfinderVertexID selectedNeighbor = vertexValue.popSetOutOfStack(
 					vertexValue.getLoeDestinationFragment()).pop().copy();			
 			Toolbox.setEdgeAsBranch(vertex, selectedNeighbor);	
