@@ -1,16 +1,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.unipg</groupId>
-	<artifactId>pathfinder</artifactId>
+	<groupId>com</groupId>
+	<artifactId>graphray</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
-	<name>Distributed MST</name>
-	<modules>
-		<module>pathfinder-common</module>
-		<module>pathfinder-core</module>
-		<module>pathfinder-utils</module>
-	</modules>
+	<name>Distributed Pathfinder Network Scaling</name>
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -29,20 +24,25 @@
 				<version>2.6.0</version>
 			</dependency>
 			<dependency>
-				<groupId>com.unipg</groupId>
-				<artifactId>pathfinder-common</artifactId>
-				<version>0.0.1-SNAPSHOT</version>
-			</dependency>
-			<dependency>
 				<groupId>org.apache.giraph</groupId>
 				<artifactId>giraph-block-app</artifactId>
 				<version>1.2.0-hadoop2</version>
 			</dependency>
 			<dependency>
-				<groupId>com.unipg</groupId>
-				<artifactId>pathfinder-utils</artifactId>
+				<groupId>com</groupId>
+				<artifactId>graphray-common</artifactId>
+				<version>0.0.1-SNAPSHOT</version>
+			</dependency>
+			<dependency>
+				<groupId>com</groupId>
+				<artifactId>graphray-utils</artifactId>
 				<version>0.0.1-SNAPSHOT</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
+	<modules>
+		<module>graphray-common</module>
+		<module>graphray-core</module>
+		<module>graphray-utils</module>
+	</modules>
 </project>
