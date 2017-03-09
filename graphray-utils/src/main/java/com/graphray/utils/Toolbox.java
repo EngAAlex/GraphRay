@@ -236,7 +236,16 @@ public class Toolbox {
 	public static void removeSetFromActiveFragmentStack(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, PathfinderVertexID fragmentToRemove) {
 		SetWritable<PathfinderVertexID> toRemove = vertex.getValue().popSetOutOfStack(fragmentToRemove);
 		if(toRemove != null)
-			Toolbox.updateMultipleEdgeValueWithStatus(vertex, PathfinderEdgeType.UNASSIGNED, toRemove);
-//		
+			Toolbox.updateMultipleEdgeValueWithStatus(vertex, PathfinderEdgeType.UNASSIGNED, toRemove);	
+	}
+	
+	/**
+	 * @param vertex
+	 * @param recipientsForFragment
+	 */
+	public static void setMultipleEdgesAsPathfinder(
+			Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
+			SetWritable<PathfinderVertexID> recipients) {
+		updateMultipleEdgeValueWithStatus(vertex, PathfinderEdgeType.PATHFINDER, recipients);		
 	}
 }

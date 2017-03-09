@@ -21,18 +21,18 @@ import com.graphray.common.writables.SetWritable;
  * @author spark
  *
  */
-public class PathfinderVertexType extends DoubleWritable { //MISValue
+public class PathfinderVertexType implements Writable{
 
 	protected boolean isRoot;
 	protected boolean boruvkaStatus;
 	protected PathfinderVertexID fragmentIdentity;
 	protected double loeValue;
-//	protected PathfinderVertexID loeDestination;
+	protected PathfinderVertexID lastConnectedFragment;
 	protected PathfinderVertexID loeDestinationFragment;	
 	protected boolean loesDepleted;
 	protected MapWritable loeAlternatives;
 	protected SetWritable<PathfinderVertexID> acceptedConnections;
-	
+
 	protected boolean clearedForConnection;
 	protected boolean pingedByRoot;
 	protected boolean branchConnection;
@@ -49,22 +49,7 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 		loeDestinationFragment = new PathfinderVertexID();		
 		loeAlternatives = new MapWritable();
 		acceptedConnections = new SetWritable<PathfinderVertexID>();
-	}
-	
-//	/**
-//	 * 
-//	 */
-//	public PathfinderVertexType(PathfinderVertexID fragmentIdentity) {
-//		super();
-//		isRoot = true;
-//		boruvkaStatus = true;
-//		depth = -1;
-//		branches = 0;
-//		loeValue = Double.MAX_VALUE;
-//		this.fragmentIdentity = fragmentIdentity;
-//		loeAlternatives = new MapWritable();		
-//	}
-	
+	}	
 
 	/**
 	 * @return the isRoot
@@ -81,19 +66,6 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	}
 	
 	/**
-	 * @return
-	 */
-	public double getMISValue(){
-		return super.get();
-	}
-	
-	/**
-	 * 
-	 */
-	public void setMISValue(double value){
-		super.set(value);
-	}
-	/**
 	 * @return the loe
 	 */
 	public double getLOE() {
@@ -106,18 +78,20 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	public void updateLOE(double loe) {
 		this.loeValue = loe;
 	}
-	
-	/**
-	 * 
-	 */
-	public void resetLOE(){
-		updateLOE(Double.MAX_VALUE);
-//		setLoeDestination(null);
+
+	public void getReadyForNextRound(){
+		lastConnectedFragment = null;
 		setLoeDestinationFragment(null);
 		clearedForConnection = false;		
 		acceptedConnections.clear();
 		setPingedByRoot(false);
 		branchConnection = false;
+	}
+	/**
+	 * 
+	 */
+	public void resetLOE(){
+		updateLOE(Double.MAX_VALUE);
 	}
 	
 	public void setLOEStack(MapWritable loeStack){
@@ -172,6 +146,18 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	public SetWritable<PathfinderVertexID> getAcceptedConnections(){
 		return acceptedConnections;
 	}
+	
+	/**
+	 * @param loeDestination the loeDestination to set
+	 */
+	public void setLastConnectedFragment(PathfinderVertexID loeDestination) {
+		this.lastConnectedFragment = loeDestination;
+	}
+
+
+	public PathfinderVertexID getLastConnectedFragment(){
+		return this.lastConnectedFragment;
+	}
 
 	/**
 	 * @return the loeDestinationFragment
@@ -201,14 +187,12 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 		((SetWritable<PathfinderVertexID>)loeAlternatives.get(fragment)).add(recipient);
 	}
 	
-	public SetWritable<PathfinderVertexID> getSetOutOfStack(PathfinderVertexID setToPop){
-//		return (SetWritable<PathfinderVertexID>) loeAlternatives.remove(loeAlternatives.keySet().iterator().next());
+	public SetWritable<PathfinderVertexID> peekSetOutOfStack(PathfinderVertexID setToPop){
 		return (SetWritable<PathfinderVertexID>) loeAlternatives.get(setToPop);
 	}
 	
 	@SuppressWarnings("unchecked")
 	public SetWritable<PathfinderVertexID> popSetOutOfStack(PathfinderVertexID setToPop){
-//		return (SetWritable<PathfinderVertexID>) loeAlternatives.remove(loeAlternatives.keySet().iterator().next());
 		return (SetWritable<PathfinderVertexID>) loeAlternatives.remove(setToPop);
 	}
 	
@@ -236,6 +220,38 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	
 	public void resetLOEDepleted(){
 		this.loesDepleted = false;
+	}
+	
+	/**
+	 * @param senderID
+	 * @param fragmentID
+	 */
+	public void addVertexToFragment(PathfinderVertexID senderID, PathfinderVertexID fragmentID) {
+		if(!loeAlternatives.containsKey(fragmentID))
+			loeAlternatives.put(fragmentID.copy(), new SetWritable<PathfinderVertexID>());
+		((SetWritable<PathfinderVertexID>)loeAlternatives.get(fragmentID)).add(senderID.copy());
+	}
+
+	/**
+	 * @param senderID
+	 * @param fragmentI
+	 */
+	public void removeVertexFromFragment(PathfinderVertexID senderID, PathfinderVertexID fragmentID) {
+		if(loeAlternatives.containsKey(fragmentID)){
+			SetWritable<PathfinderVertexID> currentSet = (SetWritable<PathfinderVertexID>) loeAlternatives.get(fragmentID);
+			currentSet.remove(senderID);
+			if(currentSet.size() == 0){
+				loeAlternatives.remove(fragmentID);
+			}
+		}
+	}
+	
+	/**
+	 * @param fragment
+	 * @return
+	 */
+	public boolean loeStackContainsFragment(PathfinderVertexID fragment) {
+		return loeAlternatives.containsKey(fragment);
 	}
 
 	/**
@@ -340,7 +356,6 @@ public class PathfinderVertexType extends DoubleWritable { //MISValue
 	 * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
 	 */
 	public void write(DataOutput out) throws IOException {
-		super.write(out);
 		out.writeBoolean(isRoot);
 		out.writeBoolean(boruvkaStatus);
 		out.writeBoolean(loesDepleted);

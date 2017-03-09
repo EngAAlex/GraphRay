@@ -49,7 +49,6 @@ public class BoruvkaMaster {
 		if(counter == 0){
 			if(lD.compute()){
 				counter++;
-//				master.setComputation(LOEConnection.class);
 				try {
 					ecr.compute();
 				} catch (Exception e) {
@@ -61,8 +60,7 @@ public class BoruvkaMaster {
 			}
 			return false;
 		}else if(counter == 1){
-//		}else if(counter == 1 || counter == 2){
-//			master.setComputation(LOEConnectionEncore.class);
+
 			try {
 				if(ecr.compute())
 					counter++;
@@ -75,12 +73,8 @@ public class BoruvkaMaster {
 				master.haltComputation();
 			}
 		}
-
-		if(counter == 1){
-			master.setComputation(BoruvkaRootUpdateSetup.class);
-			counter++;
-			return false;
-		}else if(counter == 2){
+		
+		if(counter == 2){
 			master.setComputation(BoruvkaRootUpdateSetup.class);
 			counter++;
 			return false;
@@ -99,10 +93,14 @@ public class BoruvkaMaster {
 			counter++;
 			return false;
 		}else if(counter == 4){
-			master.setComputation(BoruvkaRootUpdateConfirmationCompletion.class);
+			master.setComputation(BoruvkaRootUpdateConfirmationReply.class);
 			counter++;
 			return false;
 		}else if(counter == 5){
+			master.setComputation(BoruvkaRootUpdateConfirmationCompletion.class);
+			counter++;
+			return false;
+		}else if(counter == 6){
 			master.setComputation(BoruvkaRootUpdateCompletion.class);
 			counter = 0;
 			return false;

@@ -37,6 +37,7 @@ public class BoruvkaComputations {
 			PathfinderVertexType vertexValue = vertex.getValue();
 			if(vertexValue.isRoot() && !vertexValue.boruvkaStatus()){ //the vertex is a deactivated root and must be updated
 				PathfinderVertexID myFragment = vertexValue.getFragmentIdentity();
+				vertexValue.popSetOutOfStack(myFragment);							
 				if(!vertexValue.hasLOEsDepleted()){
 					if(isLogEnabled)
 						log.info("Adding edge as dummy to " + myFragment);					
@@ -45,9 +46,7 @@ public class BoruvkaComputations {
 					}else if(vertex.getEdgeValue(myFragment).unassigned()){
 						Toolbox.updateEdgeValueWithStatus(vertex, PathfinderEdgeType.DUMMY, myFragment);
 						Toolbox.updateRemoteEdgeWithStatus(this, vertex.getId(), myFragment, vertex.getEdgeValue(myFragment), PathfinderEdgeType.DUMMY);
-
 					}
-
 					if(isLogEnabled)
 						log.info("LOES not depleted");
 				}
@@ -57,9 +56,17 @@ public class BoruvkaComputations {
 				if(isLogEnabled)
 					log.info("I'm still a root during Boruvka");
 				aggregate(GraphRayMasterCompute.boruvkaProcedureCompletedAggregator, new IntWritable(1));
+				PathfinderVertexID connectedFragment = vertexValue.getLastConnectedFragment();
+				vertexValue.popSetOutOfStack(connectedFragment);			
+				if(connectedFragment != null){
+//					log.info("Informing cluster of connected fragment " + connectedFragment);
+					Collection<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.DUMMY, PathfinderEdgeType.BRANCH, PathfinderEdgeType.PATHFINDER);
+					if(destinations != null)
+						sendMessageToMultipleEdges(destinations.iterator(), new ControlledGHSMessage(vertex.getId(), connectedFragment, ControlledGHSMessage.ROOT_STATUS));
+				}
+
 			}
 		}
-
 	}
 
 	public static class BoruvkaRootUpdateConfirmationPing extends GraphRayComputation<ControlledGHSMessage, ControlledGHSMessage>{
@@ -71,7 +78,7 @@ public class BoruvkaComputations {
 		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
 				Iterable<ControlledGHSMessage> messages) throws IOException {
 			super.compute(vertex, messages);
-			PathfinderVertexType vertexValue = vertex.getValue();			
+			PathfinderVertexType vertexValue = vertex.getValue();		
 			if(vertexValue.isRoot() && !vertexValue.boruvkaStatus()){ //the vertex is a deactivated root and must be updated			
 				PathfinderVertexID myFragment = vertexValue.getFragmentIdentity();
 				if(isLogEnabled)
@@ -79,6 +86,16 @@ public class BoruvkaComputations {
 				sendMessage(myFragment, new ControlledGHSMessage(vertex.getId(), myFragment, ControlledGHSMessage.ROOT_STATUS));
 				vertexValue.setRoot(false);
 				vertexValue.reactivateForBoruvka();
+			}
+			//			else if(vertexValue.isRoot()){
+			for(ControlledGHSMessage msg : messages){
+				PathfinderVertexID msgFragment = msg.getFragmentID();
+				if(msg.getSenderID().equals(vertexValue.getFragmentIdentity())){
+					if(isLogEnabled)
+						log.info("updating last connected fragment -- removing from stack " + msgFragment);
+					vertexValue.popSetOutOfStack(msgFragment);
+				}
+				//				}
 			}
 		}
 	}
@@ -101,12 +118,18 @@ public class BoruvkaComputations {
 
 			while(msgs.hasNext()){
 				ControlledGHSMessage current = msgs.next();
-				if(!current.getFragmentID().equals(myFragment)){
+				PathfinderVertexID msgFragmentID = current.getFragmentID();
+				PathfinderVertexID msgSenderID = current.getSenderID();
+				if(current.getStatus() == ControlledGHSMessage.ROOT_STATUS){
+					vertexValue.popSetOutOfStack(msgFragmentID);
+					continue;
+				}
+				if(!msgFragmentID.equals(myFragment)){
 					if(verticesToNotify == null)
 						verticesToNotify = new HashSet<PathfinderVertexID>();
 					if(isLogEnabled)
-						log.info("Notifying " + current.getSenderID() + " of updated root " + myFragment);
-					verticesToNotify.add(current.getSenderID().copy());
+						log.info("Notifying " + msgSenderID + " of updated root " + myFragment);
+					verticesToNotify.add(msgSenderID.copy());
 				}else
 					if(isLogEnabled)
 						log.info("Fragment match -- no need for update");
@@ -142,21 +165,19 @@ public class BoruvkaComputations {
 						if(isLogEnabled)
 							log.info("Updating with correct fragment " + current.getFragmentID());
 						Toolbox.removeExistingDummies(this, vertex, myFragment);
-						vertexValue.setFragmentIdentity(current.getFragmentID().copy());
+						myFragment = current.getFragmentID().copy();						
+						vertexValue.setFragmentIdentity(myFragment);
 					}
 				}
-			else				
+			else
 				if(isLogEnabled)
 					log.info("Fragment already " + myFragment);
-
-			Collection<PathfinderVertexID> verticesToNotify = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH, PathfinderEdgeType.DUMMY);
+			
+			Collection<PathfinderVertexID> verticesToNotify = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.BRANCH, PathfinderEdgeType.PATHFINDER, PathfinderEdgeType.DUMMY);
 
 			if(verticesToNotify != null)
 				sendMessageToMultipleEdges(verticesToNotify.iterator(), new ControlledGHSMessage(vertex.getId(), myFragment, ControlledGHSMessage.ROOT_UPDATE));
-
 		}
-
-
 	}
 
 	public static class BoruvkaRootUpdateCompletion extends GraphRayComputation<ControlledGHSMessage, ControlledGHSMessage>{
@@ -176,15 +197,15 @@ public class BoruvkaComputations {
 			if(!msgs.hasNext())
 				return;
 			PathfinderVertexID newFragmentID = null;
-			PathfinderVertexID myFragment = vertexValue.getFragmentIdentity();
+			PathfinderVertexID oldFragment = vertexValue.getLastConnectedFragment();			
+			PathfinderVertexID myFragment = vertexValue.getFragmentIdentity().copy();
 			while(msgs.hasNext()){
 				ControlledGHSMessage current = msgs.next();
 				PathfinderVertexID currentFragment = current.getFragmentID().copy();
-				if(isLogEnabled)
-					log.info("Received " + currentFragment + " from " + current.getSenderID());
+				log.info("Received " + currentFragment + " from " + current.getSenderID());
 				if(myFragment.equals(currentFragment)){
 					if(isLogEnabled)
-						log.info("Fragment already  " + currentFragment);
+						log.info("Fragment already  " + currentFragment);	
 					continue;
 					//					return;
 				}else if(currentFragment.equals(vertex.getId())){
@@ -201,35 +222,62 @@ public class BoruvkaComputations {
 				}
 			}
 
-			if(newFragmentID == null)
-				return;
-
-			if(isLogEnabled)
-				log.info("Updating with new fragment " + newFragmentID);
-			Iterable<PathfinderVertexID> dummyEdges = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.DUMMY);
-			if(dummyEdges != null){
-				Iterator<PathfinderVertexID> dummyEdgesIt = dummyEdges.iterator();
-				while(dummyEdgesIt.hasNext()){
-					PathfinderVertexID currentDummy = dummyEdgesIt.next();			//old pair of dummies are removed
-					if(isLogEnabled)
-						log.info("Removing existing dummy " + currentDummy);
-					Toolbox.removeExistingDummies(this, vertex, currentDummy.copy());
+			if(newFragmentID != null){
+				if(isLogEnabled)				
+					log.info("Updating with new fragment " + newFragmentID);
+				vertexValue.popSetOutOfStack(newFragmentID);
+				//				vertexValue.setLastConnectedFragment(myFragment);
+				oldFragment = myFragment;
+				Iterable<PathfinderVertexID> dummyEdges = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.DUMMY);
+				if(dummyEdges != null){
+					Iterator<PathfinderVertexID> dummyEdgesIt = dummyEdges.iterator();
+					while(dummyEdgesIt.hasNext()){
+						PathfinderVertexID currentDummy = dummyEdgesIt.next();			//old pair of dummies are removed
+//						log.info("Removing existing dummy " + currentDummy);
+						Toolbox.removeExistingDummies(this, vertex, currentDummy.copy());
+					}
 				}
-			}
-			//			if(msgs.hasNext()) what if is not the only message?
-			//				throw new Exception();
-			vertexValue.setFragmentIdentity(newFragmentID);
-			if(vertex.getEdgeValue(newFragmentID) == null){
-				Toolbox.connectWithDummies(this, vertex, newFragmentID);
-				if(isLogEnabled)
-					log.info("Added new dummies to " + newFragmentID);
-			}
+				//			if(msgs.hasNext()) what if is not the only message?
+				//				throw new Exception();
+				vertexValue.setFragmentIdentity(newFragmentID);
+				//				if(vertex.getEdgeValue(newFragmentID) == null){
+				//					Toolbox.connectWithDummies(this, vertex, newFragmentID);
+				//				}
+				if(vertex.getEdgeValue(newFragmentID) == null){
+					Toolbox.connectWithDummies(this, vertex, newFragmentID);
+//					log.info("Added new dummies to " + newFragmentID);
+				}else if(vertex.getEdgeValue(newFragmentID).unassigned()){
+					Toolbox.updateEdgeValueWithStatus(vertex, PathfinderEdgeType.DUMMY, newFragmentID);
+					Toolbox.updateRemoteEdgeWithStatus(this, vertex.getId(), newFragmentID, vertex.getEdgeValue(newFragmentID), PathfinderEdgeType.DUMMY);
+				}
 
+			}else
+				vertexValue.popSetOutOfStack(myFragment);
+
+
+			if(oldFragment != null){
+				vertexValue.popSetOutOfStack(oldFragment);
+				if(/*vertexValue.isStackEmpty() && */!vertexValue.hasLOEsDepleted()){
+					Collection<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.UNASSIGNED);
+					if(destinations != null){
+						if(isLogEnabled)
+							log.info("Informing unassigned edges about my new fragment");
+						sendMessageToMultipleEdges(destinations.iterator(), new ControlledGHSMessage(vertex.getId(), vertexValue.getFragmentIdentity(), ControlledGHSMessage.ROOT_UPDATE));
+						sendMessageToMultipleEdges(destinations.iterator(), new ControlledGHSMessage(vertex.getId(), oldFragment, ControlledGHSMessage.ROOT_STATUS));					
+					}
+				}
+				//				}else{
+				//					log.info("Informing my loestack about my new fragment");
+				//					for(Writable k : vertexValue.getActiveFragments()){
+				//						sendMessageToMultipleEdges(((SetWritable<PathfinderVertexID>)vertexValue.getRecipientsForFragment((PathfinderVertexID)k)).iterator(), new ControlledGHSMessage(vertex.getId(), vertexValue.getFragmentIdentity(), ControlledGHSMessage.ROOT_UPDATE));
+				//						sendMessageToMultipleEdges(((SetWritable<PathfinderVertexID>)vertexValue.getRecipientsForFragment((PathfinderVertexID)k)).iterator(), new ControlledGHSMessage(vertex.getId(), vertexValue.getLastConnectedFragment().copy(), ControlledGHSMessage.ROOT_STATUS));					
+				//					}
+				//				}
+				//			}
+				//			}
+			}
 
 		}
 
 	}
-
-
-
 }
