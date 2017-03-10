@@ -202,7 +202,8 @@ public class BoruvkaComputations {
 			while(msgs.hasNext()){
 				ControlledGHSMessage current = msgs.next();
 				PathfinderVertexID currentFragment = current.getFragmentID().copy();
-				log.info("Received " + currentFragment + " from " + current.getSenderID());
+				if(isLogEnabled)
+					log.info("Received " + currentFragment + " from " + current.getSenderID());
 				if(myFragment.equals(currentFragment)){
 					if(isLogEnabled)
 						log.info("Fragment already  " + currentFragment);	

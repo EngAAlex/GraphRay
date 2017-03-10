@@ -4,26 +4,12 @@
 package com.graphray.ghs.computations;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map.Entry;
-import java.util.Set;
 import java.util.Stack;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.WorkerClientRequestProcessor;
-import org.apache.giraph.edge.Edge;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.master.MasterCompute;
-import org.apache.giraph.worker.WorkerGlobalCommUsage;
-import org.apache.hadoop.io.BooleanWritable;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.log4j.Logger;
 
 import com.graphray.GraphRayComputation;
 import com.graphray.common.edgetypes.PathfinderEdgeType;
@@ -31,7 +17,6 @@ import com.graphray.common.messagetypes.ControlledGHSMessage;
 import com.graphray.common.vertextypes.PathfinderVertexID;
 import com.graphray.common.vertextypes.PathfinderVertexType;
 import com.graphray.common.writables.SetWritable;
-import com.graphray.masters.GraphRayMasterCompute;
 import com.graphray.utils.Toolbox;
 
 
@@ -126,7 +111,8 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 				return;
 			}
 
-			log.info("available loes " + loes.size());
+			if(isLogEnabled)
+				log.info("available loes " + loes.size());
 
 			for(PathfinderVertexID candidate : loes){ //on all edges with same weight a test message is sent
 				if(isLogEnabled)
