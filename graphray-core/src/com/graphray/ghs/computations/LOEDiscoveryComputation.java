@@ -51,6 +51,8 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 				if(!vertex.getEdgeValue(neighbor).isBranch()){
 					Toolbox.setEdgeAsBranch(vertex, neighbor);
 					sendMessage(neighbor, new ControlledGHSMessage(vertex.getId().copy(), ControlledGHSMessage.FORCE_ACCEPT));
+					vertexValue.deactivateForBoruvka();
+					vertexValue.setRoot(false);
 					vertexValue.loesDepleted();
 				}
 				return;
@@ -133,6 +135,9 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 		@Override
 		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
 				Iterable<ControlledGHSMessage> messages) throws IOException {
+			if(vertex.getNumEdges() == 1)
+				return;
+			
 			PathfinderVertexID vertexId = vertex.getId();
 			PathfinderVertexType vertexValue = vertex.getValue();
 			PathfinderVertexID myFragment = vertexValue.getFragmentIdentity();
