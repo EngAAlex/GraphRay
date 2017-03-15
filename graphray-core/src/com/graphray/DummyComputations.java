@@ -31,10 +31,11 @@ public class DummyComputations {
 		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
 				Iterable<ControlledGHSMessage> messages) throws IOException {
 			Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();
-			super.compute(vertex, messages);
+//			super.compute(vertex, messages);
 			while(edges.hasNext()){
 				Edge<PathfinderVertexID, PathfinderEdgeType> current = edges.next();
 				if(!current.getValue().isBranch() && !current.getValue().isPathfinder()){
+//				log.info("Removing Edge from " + vertex.getId() + " to " + current.getTargetVertexId() + " " + PathfinderEdgeType.CODE_STRINGS[current.getValue().getStatus()]);					
 					removeEdgesRequest(vertex.getId(), current.getTargetVertexId().copy());
 				}
 //				else if(current.getValue().isPathfinder())

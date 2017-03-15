@@ -3,8 +3,6 @@
  */
 package com.graphray.boruvka.masters;
 
-import java.io.IOException;
-
 import org.apache.giraph.master.MasterCompute;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.log4j.Logger;
@@ -14,7 +12,9 @@ import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaRootUpdateCo
 import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaRootUpdateConfirmationPing;
 import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaRootUpdateConfirmationReply;
 import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaRootUpdateSetup;
-import com.graphray.common.edgetypes.PathfinderEdgeType;
+import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaUnassignedEdgesFinalUpdate;
+import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaUpdateConnectedFragmentsPing;
+import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaUpdateConnectedFragmentsReply;
 import com.graphray.ghs.computations.EdgeConnectionRoutine;
 import com.graphray.ghs.masters.LOEDiscoveryMaster;
 import com.graphray.masters.GraphRayMasterCompute;
@@ -47,6 +47,20 @@ public class BoruvkaMaster {
 	 */
 	public boolean compute() {				
 		if(counter == 0){
+			if(master.getComputation().equals(BoruvkaUnassignedEdgesFinalUpdate.class)){
+				int remainingFragments = ((IntWritable)master.getAggregatedValue(GraphRayMasterCompute.boruvkaProcedureCompletedAggregator)).get();
+				if(remainingFragments == 1){
+					master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.remainingFragments)
+					.setValue(0);
+					return true;
+				}else{
+					master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.remainingFragments)
+					.setValue(remainingFragments);
+					master.setAggregatedValue(GraphRayMasterCompute.boruvkaProcedureCompletedAggregator, new IntWritable(0));
+					log.info("Remaining fragments " + remainingFragments);
+				}
+			}
+
 			if(lD.compute()){
 				counter++;
 				try {
@@ -54,7 +68,7 @@ public class BoruvkaMaster {
 				} catch (Exception e) {
 					e.printStackTrace();
 					master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.computationIncomplete)
-						.setValue(1);					
+					.setValue(1);					
 					master.haltComputation();
 				}
 			}
@@ -69,25 +83,16 @@ public class BoruvkaMaster {
 			} catch (Exception e) {
 				e.printStackTrace();
 				master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.computationIncomplete)
-					.setValue(1);				
+				.setValue(1);				
 				master.haltComputation();
 			}
 		}
-		
+
 		if(counter == 2){
 			master.setComputation(BoruvkaRootUpdateSetup.class);
 			counter++;
 			return false;
 		}else if(counter == 3){
-			if(((IntWritable)master.getAggregatedValue(GraphRayMasterCompute.boruvkaProcedureCompletedAggregator)).get() == 1){
-				master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.remainingFragments)
-					.setValue(0);				
-				return true;
-			}else{
-				master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.remainingFragments)
-					.setValue(((IntWritable)master.getAggregatedValue(GraphRayMasterCompute.boruvkaProcedureCompletedAggregator)).get());
-				master.setAggregatedValue(GraphRayMasterCompute.boruvkaProcedureCompletedAggregator, new IntWritable(0));
-			}
 			master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.boruvkaRounds).increment(1);
 			master.setComputation(BoruvkaRootUpdateConfirmationPing.class);
 			counter++;
@@ -102,6 +107,18 @@ public class BoruvkaMaster {
 			return false;
 		}else if(counter == 6){
 			master.setComputation(BoruvkaRootUpdateCompletion.class);
+			counter++;
+			return false;
+		}else if(counter == 7){
+			master.setComputation(BoruvkaUpdateConnectedFragmentsPing.class);
+			counter++;
+			return false;
+		}else if(counter == 8){
+			master.setComputation(BoruvkaUpdateConnectedFragmentsReply.class);
+			counter++;
+			return false;
+		}else if(counter == 9){
+			master.setComputation(BoruvkaUnassignedEdgesFinalUpdate.class);
 			counter = 0;
 			return false;
 		}

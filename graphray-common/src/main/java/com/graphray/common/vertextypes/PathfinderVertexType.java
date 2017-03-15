@@ -27,8 +27,10 @@ public class PathfinderVertexType implements Writable{
 	protected boolean boruvkaStatus;
 	protected PathfinderVertexID fragmentIdentity;
 	protected double loeValue;
-	protected PathfinderVertexID lastConnectedFragment;
-	protected PathfinderVertexID loeDestinationFragment;	
+	protected double fragmentLoeValue;
+	protected PathfinderVertexID oldFragmentID;
+	protected SetWritable<PathfinderVertexID> lastConnectedFragments;
+	protected SetWritable<PathfinderVertexID> loeDestinationFragments;	
 	protected boolean loesDepleted;
 	protected MapWritable loeAlternatives;
 	protected SetWritable<PathfinderVertexID> acceptedConnections;
@@ -46,9 +48,11 @@ public class PathfinderVertexType implements Writable{
 		boruvkaStatus = true;
 		loeValue = Double.MAX_VALUE;
 		fragmentIdentity = new PathfinderVertexID();
-		loeDestinationFragment = new PathfinderVertexID();		
+		loeDestinationFragments = new SetWritable<PathfinderVertexID>();		
 		loeAlternatives = new MapWritable();
 		acceptedConnections = new SetWritable<PathfinderVertexID>();
+		lastConnectedFragments = new SetWritable<PathfinderVertexID>();
+		oldFragmentID = new PathfinderVertexID();
 	}	
 
 	/**
@@ -80,12 +84,14 @@ public class PathfinderVertexType implements Writable{
 	}
 
 	public void getReadyForNextRound(){
-		lastConnectedFragment = null;
-		setLoeDestinationFragment(null);
-		clearedForConnection = false;		
+		lastConnectedFragments.clear();
+		loeDestinationFragments.clear();
+		oldFragmentID = null;
+		clearedForConnection = false;
 		acceptedConnections.clear();
 		setPingedByRoot(false);
 		branchConnection = false;
+		fragmentLoeValue = Double.MAX_VALUE;
 	}
 	/**
 	 * 
@@ -127,6 +133,22 @@ public class PathfinderVertexType implements Writable{
 		this.fragmentIdentity = fragmentIdentity;
 	}
 	
+
+	
+	/**
+	 * @return
+	 */
+	public PathfinderVertexID getOldFragmentID() {
+		return oldFragmentID;
+	}
+	
+	/**
+	 * @param oldFragmentID the oldFragmentID to set
+	 */
+	public void setOldFragmentID(PathfinderVertexID oldFragmentID) {
+		this.oldFragmentID = oldFragmentID;
+	}
+
 	public void clearAcceptedConnections(){
 		acceptedConnections.clear();
 	}
@@ -150,27 +172,41 @@ public class PathfinderVertexType implements Writable{
 	/**
 	 * @param loeDestination the loeDestination to set
 	 */
-	public void setLastConnectedFragment(PathfinderVertexID loeDestination) {
-		this.lastConnectedFragment = loeDestination;
+	public void addToLastConnectedFragments(PathfinderVertexID loeDestination) {
+		lastConnectedFragments.add(loeDestination);
 	}
 
 
-	public PathfinderVertexID getLastConnectedFragment(){
-		return this.lastConnectedFragment;
+	public SetWritable<PathfinderVertexID> getLastConnectedFragments(){
+		return this.lastConnectedFragments;
 	}
 
 	/**
 	 * @return the loeDestinationFragment
 	 */
-	public PathfinderVertexID getLoeDestinationFragment() {
-		return loeDestinationFragment;
+	public SetWritable<PathfinderVertexID> getLoeDestinationFragments() {
+		return loeDestinationFragments;
+	}
+	
+	/**
+	 * @return the loeDestinationFragment
+	 */
+	public PathfinderVertexID popLoeDestinationFragment() {
+		return loeDestinationFragments.pop();
+	}
+	
+	/**
+	 * @return the loeDestinationFragment
+	 */
+	public PathfinderVertexID peekLoeDestinationFragment() {
+		return loeDestinationFragments.peek();
 	}
 
 	/**
 	 * @param loeDestinationFragment the loeDestinationFragment to set
 	 */
-	public void setLoeDestinationFragment(PathfinderVertexID loeDestinationFragment) {
-		this.loeDestinationFragment = loeDestinationFragment;
+	public void addToLoeDestinationFragment(PathfinderVertexID loeDestinationFragment) {
+		this.loeDestinationFragments.add(loeDestinationFragment);
 	}
 	
 	/**
@@ -273,6 +309,11 @@ public class PathfinderVertexType implements Writable{
 	 */
 	public void deAuthorizeConnections() {
 		this.clearedForConnection = false;
+		acceptedConnections.clear();
+	}
+	
+	public void retainAcceptedConnections(Collection<PathfinderVertexID> collectionToRetain){
+		acceptedConnections.retainAll(collectionToRetain);
 	}
 
 	/**
@@ -301,6 +342,20 @@ public class PathfinderVertexType implements Writable{
 	}
 
 	/**
+	 * @return the fragmentLoeValue
+	 */
+	public double getFragmentLoeValue() {
+		return fragmentLoeValue;
+	}
+
+	/**
+	 * @param fragmentLoeValue the fragmentLoeValue to set
+	 */
+	public void setFragmentLoeValue(double fragmentLoeValue) {
+		this.fragmentLoeValue = fragmentLoeValue;
+	}
+
+	/**
 	 * @return the pingedByRoot
 	 */
 	public boolean isPingedByRoot() {
@@ -318,7 +373,8 @@ public class PathfinderVertexType implements Writable{
 	 * @return the branchConnection
 	 */
 	public boolean isBranchConnectionEnabled() {
-		return branchConnection;
+		return !acceptedConnections.isEmpty();
+		//		return branchConnection;
 	}
 
 	/**
@@ -327,13 +383,13 @@ public class PathfinderVertexType implements Writable{
 	public void authorizeBranchConnection() {
 		this.branchConnection = true;
 	}
-	
-	/**
-	 * 
-	 */
-	public void deauthorizeBranchConnection() {
-		this.branchConnection = false;
-	}
+//	
+//	/**
+//	 * 
+//	 */
+//	public void deauthorizeBranchConnection() {
+//		this.branchConnection = false;
+//	}
 
 	/* (non-Javadoc)
 	 * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
@@ -343,13 +399,15 @@ public class PathfinderVertexType implements Writable{
 		boruvkaStatus = in.readBoolean();
 		loesDepleted = in.readBoolean();
 		loeValue = in.readDouble();
+		fragmentLoeValue = in.readDouble();
 		fragmentIdentity.readFields(in);
-		loeDestinationFragment.readFields(in);
+		loeDestinationFragments.readFields(in);
 		clearedForConnection = in.readBoolean();
 		loeAlternatives.readFields(in);
 		pingedByRoot = in.readBoolean();
 		branchConnection = in.readBoolean();
 		acceptedConnections.readFields(in);
+		oldFragmentID.readFields(in);
 	}
 
 	/* (non-Javadoc)
@@ -360,12 +418,14 @@ public class PathfinderVertexType implements Writable{
 		out.writeBoolean(boruvkaStatus);
 		out.writeBoolean(loesDepleted);
 		out.writeDouble(loeValue);
+		out.writeDouble(fragmentLoeValue);
 		fragmentIdentity.write(out);
-		loeDestinationFragment.write(out);
+		loeDestinationFragments.write(out);
 		loeAlternatives.write(out);
 		out.writeBoolean(pingedByRoot);
 		out.writeBoolean(branchConnection);
 		acceptedConnections.write(out);
+		oldFragmentID.write(out);
 	}
 
 }

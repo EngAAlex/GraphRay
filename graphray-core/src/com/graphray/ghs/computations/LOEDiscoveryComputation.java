@@ -40,9 +40,6 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 
 			PathfinderVertexType vertexValue = vertex.getValue();
 
-			//			vertexValue.resetLOE();
-			//			Toolbox.disarmPathfinderCandidates(vertex, loesToRemove);
-
 			if(vertexValue.hasLOEsDepleted()/* || !vertexValue.boruvkaStatus()*/)
 				return;
 
@@ -56,36 +53,6 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 					vertexValue.loesDepleted();
 				}
 				return;
-			}
-
-			if(!vertexValue.isStackEmpty()/*vertexValue.getLOE() != Double.MAX_VALUE*/){
-				double value = vertexValue.getLOE();
-				for(ControlledGHSMessage msg : messages){
-					PathfinderVertexID senderID = msg.getSenderID();
-					PathfinderVertexID msgFragmentID = msg.getFragmentID();
-					if(isLogEnabled)
-						log.info("Receing unassigned " + msg.getStatus() +  " root update from sender " +
-								senderID + " fragment " + msgFragmentID/* + " valye " + vertex.getEdgeValue(senderID).get()*/);
-					if(vertex.getEdgeValue(senderID).get() != value)
-						continue;
-					switch(msg.getStatus()){
-					case ControlledGHSMessage.ROOT_UPDATE:
-						if(!msgFragmentID.equals(vertexValue.getFragmentIdentity())){
-							//							log.info("adding " + msg.getSenderID() + " to fragment " + msg.getFragmentID());
-							vertexValue.addVertexToFragment(msg.getSenderID(), msg.getFragmentID());
-						}else{
-							//							log.info("Removing edge, vertices are in same fragment from " + senderID + " to " + vertex.getId());
-							removeEdgesRequest(senderID.copy(), vertex.getId());
-							removeEdgesRequest(vertex.getId(), senderID.copy());
-						}
-						break;
-					case ControlledGHSMessage.ROOT_STATUS:
-						vertexValue.popSetOutOfStack(senderID);
-						//						log.info("removing " + msg.getSenderID() + " fromg fragment " + msg.getFragmentID());					
-						vertexValue.removeVertexFromFragment(msg.getSenderID(), msg.getFragmentID());					
-						break;
-					}
-				}
 			}
 
 			vertexValue.getReadyForNextRound();
@@ -135,6 +102,8 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 		@Override
 		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
 				Iterable<ControlledGHSMessage> messages) throws IOException {
+			super.compute(vertex, messages);
+			
 			if(vertex.getNumEdges() == 1)
 				return;
 			
@@ -188,15 +157,8 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 			super.compute(vertex, messages);
 			PathfinderVertexID vertexId = vertex.getId();
 			PathfinderVertexType vertexValue = vertex.getValue();
-			//			if(vertexValue.hasLOEsDepleted()/* && !vertexValue.isRoot()*/)/*{*/
-			//				sendMessage(vertexValue.getFragmentIdentity(), new ControlledGHSMessage(vertex.getId(), ControlledGHSMessage.LOEs_DEPLETED));
-			//				return;
-			//			}
-			Iterator<ControlledGHSMessage> msgs = messages.iterator();
-			//			HashMap<PathfinderVertexID, Integer> fragmentFrequencyMap = new HashMap<PathfinderVertexID, Integer>();
-			//			HashMap<PathfinderVertexID, Stack<PathfinderVertexID>> senderFragmentMap = new HashMap<PathfinderVertexID, Stack<PathfinderVertexID>>();
 
-			//			MapWritable senderFragmentMap = new MapWritable();
+			Iterator<ControlledGHSMessage> msgs = messages.iterator();
 
 			while(msgs.hasNext()){
 				ControlledGHSMessage currentMessage = msgs.next();
@@ -213,10 +175,7 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 				case ControlledGHSMessage.ACCEPT_MESSAGE:
 					if(vertex.getEdgeValue(senderID).isBranch())
 						continue;
-					//					if(!senderFragmentMap.containsKey(remoteFragment))
-					//						senderFragmentMap.put(remoteFragment, new SetWritable<PathfinderVertexID>());
-					//					((SetWritable<PathfinderVertexID>)(senderFragmentMap.get(remoteFragment))).add(senderID.copy());
-					////					Toolbox.setEdgeAsPathfinderCandidate(vertex, senderID);
+
 					vertexValue.addToFragmentStack(remoteFragment, senderID);
 					if(isLogEnabled)
 						log.info("Received a accept message from " + senderID);
@@ -312,21 +271,13 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 				}//else
 //					log.info("Root draws");					
 			}
-			//			else{
-			//				Toolbox.disarmPathfinderCandidates(vertex, loesToRemove);
-			//				vertexValue.resetLOE();
-			//				vertexValue.resetLOEStack();
-			//				log.info("Deleting my data");
-			//			}
 
-
-//			log.info("minloe " + (minLOE == Double.MAX_VALUE ? "MAX" : minLOE));
 
 			if(minLOE != Double.MAX_VALUE /*|| !vertexValue.isStackEmpty()*/){
 				if(myLOE <= minLOE)
 					for(Writable k : vertexValue.getActiveFragments()){
 						if(isLogEnabled)
-							log.info("sending local TEST connect message to fragment " + k + " the set exists " + (vertexValue.getRecipientsForFragment(((PathfinderVertexID)k)) != null));
+							log.info("sending local TEST connect message to fragment " + k);
 						sendMessageToMultipleEdges(							
 								((SetWritable<PathfinderVertexID>)vertexValue.getRecipientsForFragment(((PathfinderVertexID)k))).iterator(), 
 								new ControlledGHSMessage(vertexId, vertexValue.getFragmentIdentity(), minLOE, ControlledGHSMessage.CONNECT_TEST)); //CONNECT_MESSAGE

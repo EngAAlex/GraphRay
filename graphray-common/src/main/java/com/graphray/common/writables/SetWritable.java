@@ -23,16 +23,16 @@ import com.graphray.common.vertextypes.PathfinderVertexID;
 public class SetWritable<T extends Writable> implements Writable, Collection<T>{
 
 	Stack<T> internalState;
-	
+
 	public SetWritable(){
 		internalState = new Stack<T>();		
 	}
-	
+
 	public SetWritable(SetWritable<T> toCopy){
 		internalState = new Stack<T>();		
 		internalState.addAll(toCopy);
 	}
-	
+
 	public boolean add(T e){
 		return internalState.add(e);
 	}
@@ -44,15 +44,32 @@ public class SetWritable<T extends Writable> implements Writable, Collection<T>{
 		return internalState.addAll(c);
 
 	}
-	
+
+
+	/**
+	 * @param recipientsForFragment
+	 */
+	public void addIfNotExistingAll(SetWritable<T> recipientsForFragment) {
+		for(T current : recipientsForFragment)
+			if(internalState.contains(current))
+				internalState.push(current);
+	}
+
 	public T pop(){
 		return internalState.pop();
 	}
-	
+
+	/**
+	 * @return
+	 */
+	public T peek() {
+		return internalState.peek();
+	}
+
 	public void clear(){
 		internalState.clear();
 	}
-	
+
 	/* (non-Javadoc)
 	 * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
 	 */
@@ -63,7 +80,20 @@ public class SetWritable<T extends Writable> implements Writable, Collection<T>{
 			for(T p : internalState)
 				p.write(out);
 	}
-	
+
+
+	/* (non-Javadoc)
+	 * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
+	 */
+	public void readFields(DataInput in) throws IOException {
+		int size = in.readInt();
+		for(int i=0; i < size; i++){
+			T element = (T) WritableFactories.newInstance((Class<? extends Writable>)(getClass().getTypeParameters()[0].getClass()));
+			element.readFields(in);
+			internalState.add(i, element);
+		}
+	}
+
 	/* (non-Javadoc)
 	 * @see java.lang.Iterable#iterator()
 	 */
@@ -136,15 +166,17 @@ public class SetWritable<T extends Writable> implements Writable, Collection<T>{
 	}
 
 	/* (non-Javadoc)
-	 * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
+	 * @see java.lang.Object#toString()
 	 */
-	public void readFields(DataInput in) throws IOException {
-		int size = in.readInt();
-		for(int i=0; i < size; i++){
-			T element = (T) WritableFactories.newInstance((Class<? extends Writable>)(getClass().getTypeParameters()[0].getClass()));
-			element.readFields(in);
-			internalState.add(i, element);
-		}
-	}	
+	@Override
+	public String toString() {
+		String toReturn = "";
+		if(internalState.isEmpty()){
+			return "Empty set";
+		}else
+			for(T current : internalState)
+				toReturn += current.toString() + ",";
+		return toReturn;
+	}
 
 }

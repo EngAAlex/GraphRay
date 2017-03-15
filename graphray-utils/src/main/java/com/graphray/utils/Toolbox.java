@@ -14,6 +14,7 @@ import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.AbstractComputation;
 import org.apache.giraph.graph.Vertex;
+import org.apache.log4j.Logger;
 
 import com.graphray.common.edgetypes.PathfinderEdgeType;
 import com.graphray.common.vertextypes.PathfinderVertexID;
@@ -25,6 +26,8 @@ import com.graphray.common.writables.SetWritable;
  *
  */
 public class Toolbox {
+	
+//	protected static Logger log = Logger.getLogger(Toolbox.class);
 
 	public static Collection<PathfinderVertexID> getSpecificEdgesForVertex(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short ... condition){
 		HashSet<PathfinderVertexID> edgesToUse = null;
@@ -175,6 +178,7 @@ public class Toolbox {
 
 	public static void updateEdgeValueWithStatus(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short newStatus, PathfinderVertexID recipient){
 		PathfinderEdgeType pet = vertex.getEdgeValue(recipient);
+//		log.info("Setting edge from " + vertex.getId() + " to " + recipient + " as " + PathfinderEdgeType.CODE_STRINGS[newStatus]);
 		vertex.setEdgeValue(recipient, new PathfinderEdgeType(pet.get(), newStatus));		
 	}
 

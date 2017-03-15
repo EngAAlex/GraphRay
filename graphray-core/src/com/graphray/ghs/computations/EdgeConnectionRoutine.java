@@ -8,16 +8,11 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.Stack;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.WorkerClientRequestProcessor;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.master.MasterCompute;
-import org.apache.giraph.worker.WorkerGlobalCommUsage;
 import org.apache.hadoop.io.BooleanWritable;
-import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 
@@ -89,12 +84,14 @@ public class EdgeConnectionRoutine{
 
 			PathfinderVertexID vertexId = vertex.getId();
 			//			PathfinderVertexID myLOEDestination = vertexValue.getLoeDestination();
-			PathfinderVertexID myfragmentIdentity = vertexValue.getFragmentIdentity();			
-			PathfinderVertexID selectedFragment = vertexValue.getLoeDestinationFragment();
+			PathfinderVertexID myfragmentIdentity = vertexValue.getFragmentIdentity();
+			////			SetWritable<PathfinderVertexID> selectedFragments;
+			//			if(vertexValue.isRoot())
+			//				selectedFragments = vertexValue.getLoeDestinationFragments();
 			double myLOE = vertexValue.getLOE();
 
 			HashSet<PathfinderVertexID> connections = new HashSet<PathfinderVertexID>();
-
+			Set<PathfinderVertexID> branchEnabled = null;
 			//			boolean branchConnection = false;
 
 			while(msgs.hasNext()){
@@ -117,11 +114,11 @@ public class EdgeConnectionRoutine{
 					log.info("Received from " + msgSender + " identity " + msgFragmentIdentity);
 
 				if(vertexValue.getFragmentIdentity().equals(msgSender) /*&& !vertex.getEdgeValue(myLOEDestination).isPathfinder()*/){ //CONNECT MESSAGE DID NOT CROSS THE FRAGMENT BORDER
-					selectedFragment = msgFragmentIdentity.copy();
-					vertexValue.setLoeDestinationFragment(selectedFragment);	
+					PathfinderVertexID currentSelectedFragment = msgFragmentIdentity.copy();
+					vertexValue.addToLoeDestinationFragment(currentSelectedFragment);	
 					if(isLogEnabled)
-						log.info("Forwarding message to fragment recipients " + selectedFragment);						
-					sendMessageToMultipleEdges(vertexValue.getRecipientsForFragment(selectedFragment).iterator(), 
+						log.info("Forwarding message to fragment recipients " + currentSelectedFragment);						
+					sendMessageToMultipleEdges(vertexValue.getRecipientsForFragment(currentSelectedFragment).iterator(), 
 							new ControlledGHSMessage(vertexId, myfragmentIdentity, vertexValue.getLOE(), ControlledGHSMessage.CONNECT_MESSAGE));
 					aggregate(GraphRayMasterCompute.messagesLeftAggregator, new BooleanWritable(false));
 					vertexValue.setPingedByRoot(true);
@@ -137,7 +134,7 @@ public class EdgeConnectionRoutine{
 						targetFragment = msgSender;							
 						break;
 					case ControlledGHSMessage.CONNECT_AS_BRANCH:
-						targetFragment = msgSender;						
+						targetFragment = msgSender;					
 						//						vertexValue.authorizeBranchConnection();
 						break;
 					}
@@ -149,8 +146,13 @@ public class EdgeConnectionRoutine{
 						if(isLogEnabled)
 							log.info("Accepting fragment " + targetFragment);
 
-						if(msgStatus == ControlledGHSMessage.CONNECT_AS_BRANCH && targetFragment.equals(selectedFragment))
-							vertexValue.authorizeBranchConnection();
+						if(msgStatus == ControlledGHSMessage.CONNECT_AS_BRANCH/* && selectedFragments.contains(targetFragment)*/){
+//							if(branchEnabled == null)
+//								branchEnabled = new HashSet<PathfinderVertexID>();
+//							branchEnabled.add(targetFragment);
+							vertexValue.acceptNewConnection(targetFragment);
+						}
+						//							vertexValue.authorizeBranchConnection();
 
 						if(vertexValue.isRoot()){
 							vertexValue.setPingedByRoot(true);
@@ -160,24 +162,33 @@ public class EdgeConnectionRoutine{
 			}
 
 			if(vertexValue.isPingedByRoot() && !connections.isEmpty()){
-				if(connections.contains(selectedFragment)/*!vertexValue.isStackEmpty()*/){
-					if(isLogEnabled)
-						log.info("Connecting to " + selectedFragment);
-					//					if(!myfragmentIdentity.equals(selectedFragment))
-					connect(vertex, vertexValue, selectedFragment);
+				connections.retainAll(vertexValue.getLoeDestinationFragments());
+				if(!connections.isEmpty()){
+					for(PathfinderVertexID pfid : connections){
+						if(isLogEnabled)
+							log.info("Connecting to " + pfid);
+						//					if(!myfragmentIdentity.equals(selectedFragment))
+						connect(vertex, vertexValue, pfid);
+					}
 					vertexValue.authorizeConnections();
+					vertexValue.retainAcceptedConnections(connections);
+//					if(branchEnabled != null){
+//						branchEnabled.retainAll(connections);
+//						if(!branchEnabled.isEmpty())
+//							vertexValue.authorizeBranchConnection();
+//					}
 				}
+			}
 
-			}/*else*/
+		}/*else*/
 
-		}
 
 		protected void connect(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, PathfinderVertexType vertexValue, PathfinderVertexID selectedFragment) throws IOException{
-			if(!vertexValue.getFragmentIdentity().equals(selectedFragment)){
+//			if(!vertexValue.getFragmentIdentity().equals(selectedFragment)){
 				SetWritable<PathfinderVertexID> edgesToUpdate = vertexValue.peekSetOutOfStack(selectedFragment);		
 				Toolbox.setMultipleEdgesAsPathfinder(vertex, edgesToUpdate);
 				rootUpdateNotification(vertex.getId(), vertex.getValue(), selectedFragment);
-			}
+//			}
 			if(isLogEnabled)
 				log.info("Connected with " + selectedFragment);
 			aggregate(GraphRayMasterCompute.branchSkippedAggregator, new BooleanWritable(false));			
@@ -188,7 +199,7 @@ public class EdgeConnectionRoutine{
 				if(isLogEnabled)
 					log.info("Updating my Boruvka Root with " + newRoot);
 				vertexValue.deactivateForBoruvka();
-				vertexValue.setLastConnectedFragment(vertexValue.getFragmentIdentity());			
+				vertexValue.setOldFragmentID(vertexValue.getFragmentIdentity());			
 				vertexValue.setFragmentIdentity(newRoot.copy());
 			}
 		}
@@ -208,8 +219,8 @@ public class EdgeConnectionRoutine{
 
 		public void rootStatusMessageReceived(PathfinderVertexID vertexId, PathfinderVertexType vertexValue, PathfinderVertexID selectedFragment){
 			if(vertexValue.isRoot()){
-				vertexValue.setLastConnectedFragment(selectedFragment.copy());
-				vertexValue.popSetOutOfStack(selectedFragment);
+				vertexValue.addToLastConnectedFragments(selectedFragment.copy());
+//				vertexValue.popSetOutOfStack(selectedFragment);
 				if(isLogEnabled)
 					log.info("setting last connected fragment " + selectedFragment);
 			}else{
@@ -236,7 +247,7 @@ public class EdgeConnectionRoutine{
 
 			PathfinderVertexID vertexId = vertex.getId();
 			PathfinderVertexID myfragmentIdentity = vertexValue.getFragmentIdentity();			
-			Set<PathfinderVertexID> selectedFragmentIdentities = null;
+//			Set<PathfinderVertexID> selectedFragmentIdentities = null;
 			double myLOE = vertexValue.getLOE();
 
 			//			HashSet<PathfinderVertexID> connections = new HashSet<PathfinderVertexID>();
@@ -256,9 +267,9 @@ public class EdgeConnectionRoutine{
 							new ControlledGHSMessage(vertexId, myfragmentIdentity, msgValue, msgStatus)); //MUST BE CONNECT TEST
 					aggregate(GraphRayMasterCompute.messagesLeftAggregator, new BooleanWritable(false));
 					vertexValue.setPingedByRoot(true);
-					if(selectedFragmentIdentities == null)
-						selectedFragmentIdentities = new HashSet<PathfinderVertexID>();
-					selectedFragmentIdentities.add(msgFragmentIdentity.copy());
+//					if(selectedFragmentIdentities == null)
+//						selectedFragmentIdentities = new HashSet<PathfinderVertexID>();
+//					selectedFragmentIdentities.add(msgFragmentIdentity.copy());
 					//					vertexValue.acceptNewConnection(msgFragmentIdentity.copy());
 				}else if(msgValue == myLOE && vertexValue.loeStackContainsFragment(msgFragmentIdentity)/*myLOEDestination.equals(msgSender) || vertex.getEdgeValue(msgSender).isPathfinderCandidate()*/){ //CONNECT MESSAGE CROSSED THE FRAGMENT BORDER
 					if(isLogEnabled)
@@ -296,8 +307,13 @@ public class EdgeConnectionRoutine{
 			if(/*!acceptedConnections.isEmpty() && */!vertexValue.isRoot()){
 				if(isLogEnabled)
 					log.info("Informing my root of cleared connection");
-				for(PathfinderVertexID w : acceptedConnections/*vertexValue.getActiveFragments()*/)
-					sendMessage(vertexValue.getFragmentIdentity(), new ControlledGHSMessage(vertex.getId(), w.copy(), vertexValue.getLOE(), ControlledGHSMessage.CONNECT_REPLY));
+				PathfinderVertexID myFragmentIdentity = vertexValue.getFragmentIdentity();
+				for(PathfinderVertexID w : acceptedConnections/*vertexValue.getActiveFragments()*/){
+					if(isLogEnabled)
+						log.info("Informing my root " + myFragmentIdentity + " of cleared connection to " + w);
+					if(!w.equals(myFragmentIdentity))
+						sendMessage(vertexValue.getFragmentIdentity(), new ControlledGHSMessage(vertex.getId(), w.copy(), vertexValue.getLOE(), ControlledGHSMessage.CONNECT_REPLY));
+				}				
 			}
 
 		}
@@ -308,6 +324,7 @@ public class EdgeConnectionRoutine{
 		/* (non-Javadoc)
 		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
 		 */
+		@SuppressWarnings("unchecked")
 		@Override
 		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
 				Iterable<ControlledGHSMessage> messages) throws IOException {
@@ -318,7 +335,9 @@ public class EdgeConnectionRoutine{
 				vertexValue.deAuthorizeConnections();
 				return;
 			}
-			Stack<PathfinderVertexID> verticesToInform = new Stack<PathfinderVertexID>();
+			SetWritable<PathfinderVertexID> verticesToInform = new SetWritable<PathfinderVertexID>();
+			MapWritable alternativeVerticesToInform = new MapWritable();
+
 			Collection<PathfinderVertexID> acceptedConnections = vertexValue.getAcceptedConnections();
 
 			Iterator<ControlledGHSMessage> msgs = messages.iterator();
@@ -334,6 +353,7 @@ public class EdgeConnectionRoutine{
 					if(msgLoe < minLoe){
 						maxFragment = Long.MIN_VALUE;
 						verticesToInform.clear();
+						alternativeVerticesToInform.clear();
 						minLoe = msgLoe;
 					}
 					if(currentFragment.get() >= maxFragment){
@@ -346,91 +366,85 @@ public class EdgeConnectionRoutine{
 						//					extraOperationsOnSenderID(currentFragment, currentSenderID);
 						verticesToInform.add(currentSenderID.copy());
 					}
+					if(!alternativeVerticesToInform.containsKey(currentFragment))
+						alternativeVerticesToInform.put(currentFragment.copy(), new SetWritable<PathfinderVertexID>());
+					((SetWritable<PathfinderVertexID>)alternativeVerticesToInform.get(currentFragment)).add(currentSenderID.copy());
 				}
 			}
 
-			SetWritable<PathfinderVertexID> myContribution = null;
+			//			SetWritable<PathfinderVertexID> myContribution = null;
+
 			double myLOE = vertexValue.getLOE();
 			acceptedConnections.retainAll(vertexValue.getActiveFragments());			
 			if(acceptedConnections.size() > 0 && myLOE != Double.MAX_VALUE && myLOE <= minLoe){
 				if(myLOE < minLoe){
 					maxFragment = Long.MIN_VALUE;
 					verticesToInform.clear();
+					alternativeVerticesToInform.clear();
 					minLoe = myLOE;
 				}
-				//				Set<Writable> vertexConnections = vertexValue.getActiveFragments();
-				//				for(Writable w : vertexConnections){
-				//					PathfinderVertexID pfid = (PathfinderVertexID) w;
+
 				for(PathfinderVertexID pfid : acceptedConnections){
 					if(pfid.get() > maxFragment){
 						maxFragment = pfid.get();
 						maxFragmentID = pfid.copy();
-						//					operateOnVerticesToInform(verticesToInform);					
 						verticesToInform.clear();
 					}
+					if(!alternativeVerticesToInform.containsKey(pfid))
+						alternativeVerticesToInform.put(pfid.copy(), new SetWritable<PathfinderVertexID>());
+					((SetWritable<PathfinderVertexID>)alternativeVerticesToInform.get(pfid))
+						.addIfNotExistingAll(vertexValue.getRecipientsForFragment(pfid));
 				}
-				myContribution = vertexValue.peekSetOutOfStack(maxFragmentID);
 			}
 
 			if(maxFragmentID == null)
 				return;
+			
+			vertexValue.setFragmentLoeValue(minLoe);
+			
+			if(maxFragmentID.get() > vertexValue.getFragmentIdentity().get()){
+				attemptToConnectFragment(vertex, verticesToInform, minLoe, maxFragmentID);
+				alternativeVerticesToInform.clear();
+			}else{
+				for(Writable w : alternativeVerticesToInform.keySet()){
+					PathfinderVertexID currentFragmentToMerge = (PathfinderVertexID) w;
+					attemptToConnectFragment(vertex, ((SetWritable<PathfinderVertexID>)alternativeVerticesToInform.get(w)), minLoe, currentFragmentToMerge);
+				}
+			}
+
+			vertexValue.deAuthorizeConnections();
+		}
+
+
+		protected void attemptToConnectFragment(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, SetWritable<PathfinderVertexID> verticesToInform, double minLoe, PathfinderVertexID fragment){
+
+			PathfinderVertexType vertexValue = vertex.getValue();
 
 			if(isLogEnabled)
-				log.info("Fragment chosen: " + maxFragmentID);
-			vertexValue.setLoeDestinationFragment(maxFragmentID.copy());
+				log.info("Fragment chosen: " + fragment);
+			vertexValue.addToLoeDestinationFragment(fragment.copy());
+
+			SetWritable<PathfinderVertexID>myContribution = vertexValue.peekSetOutOfStack(fragment);
 
 			if(myContribution != null)
 				verticesToInform.addAll(myContribution);
 			if(isLogEnabled)
-				log.info("Informing fragment " + maxFragmentID + " to enable connection. Vertices to inform " + verticesToInform.size());
+				log.info("Informing fragment " + fragment + " to enable connection. Vertices to inform " + verticesToInform.size());
 
-			if(vertex.getId().get() >= maxFragmentID.get()){
+			if(vertex.getId().get() >= fragment.get()){
 				if(isLogEnabled)				
 					log.info("I'm choosing who's gonna be the next branch");
-				sendMessage(verticesToInform.pop(), new ControlledGHSMessage(vertex.getId(), maxFragmentID, minLoe, ControlledGHSMessage.CONNECT_AS_BRANCH));							
+				sendMessage(verticesToInform.pop(), new ControlledGHSMessage(vertex.getId(), fragment, minLoe, ControlledGHSMessage.CONNECT_AS_BRANCH));							
 				//				informSoonToBeBranches(vertex.getId(), verticesToInform, minLoe, maxFragmentID);
 			}
 
 			if(verticesToInform.size() > 0)
 				sendMessageToMultipleEdges(verticesToInform.iterator(), 
-						new ControlledGHSMessage(vertex.getId(), maxFragmentID, minLoe, ControlledGHSMessage.CONNECT_FROM_ROOT_MESSAGE));
+						new ControlledGHSMessage(vertex.getId(), fragment, minLoe, ControlledGHSMessage.CONNECT_FROM_ROOT_MESSAGE));
 
-			//				if(!fragmentCount.containsKey(currenFragment.get()))
-			//					fragmentCount.put(currenFragment.get(), 1);
-			//				else
-			//					fragmentCount.put(fragmentCount.get(currentFragment.get() + 1));
-		}
-		/**
-		 * @param maxFragmentID
-		 * @return
-		 */
-		protected SetWritable<PathfinderVertexID> getMyContribution(PathfinderVertexType vertexValue, PathfinderVertexID maxFragmentID) {
-			return vertexValue.peekSetOutOfStack(maxFragmentID);
-		}
-		/**
-		 * @param currentFragment
-		 * @param currentSenderID
-		 */
-		protected void extraOperationsOnSenderID(PathfinderVertexID currentFragment, PathfinderVertexID currentSenderID) {
-			//NO-OP
-		}
-		//			if(vertexValue.isClearedForConnection() && !vertexValue.isRoot())
-		//				sendMessage(vertexValue.getFragmentIdentity(), new ControlledGHSMessage(vertex.getId(), vertexValue.getLoeDestinationFragment(), ControlledGHSMessage.CONNECT_REPLY));
-
-		/**
-		 * @param verticesToInform
-		 * @param maxFragmentID
-		 */
-		protected void informSoonToBeBranches(PathfinderVertexID vertexID, Stack<PathfinderVertexID> verticesToInform, PathfinderVertexID maxFragmentID) {
-			sendMessage(verticesToInform.pop(), new ControlledGHSMessage(vertexID, maxFragmentID, ControlledGHSMessage.CONNECT_AS_BRANCH));			
 		}
 
-
-		public void operateOnVerticesToInform(Stack<PathfinderVertexID> vti){
-			vti.clear();
-		}
 	}
-
 	public static class BranchConnector extends LOEConnection {
 
 		/* (non-Javadoc)
@@ -460,19 +474,19 @@ public class EdgeConnectionRoutine{
 					rootUpdateMessageReceived(vertexValue, receivedNewPfid);
 			}
 			if(!vertexValue.isClearedForConnection() || !vertexValue.isBranchConnectionEnabled()){
-//				vertexValue.popSetOutOfStack(vertexValue.getLoeDestinationFragment());				
+				//				vertexValue.popSetOutOfStack(vertexValue.getLoeDestinationFragment());				
 				return;
 			}
-			//			if(vertexValue.stackSize() != 1)
-			//				throw new IOException("Stack size for branch connection != 1");
-			//			PathfinderVertexID selectedNeighbor = vertexValue.popSetOutOfStack(
-			//					(PathfinderVertexID) vertexValue.getActiveFragments().iterator().next()).pop().copy();
-			if(isLogEnabled)
-				log.info("I'm gonna connect to fragment " + vertexValue.getLoeDestinationFragment() + " as branch");
-			PathfinderVertexID selectedNeighbor = vertexValue.peekSetOutOfStack(
-					vertexValue.getLoeDestinationFragment()).pop().copy();			
-			Toolbox.setEdgeAsBranch(vertex, selectedNeighbor);	
-			Toolbox.setRemoteEdgeAsBranch(this, vertex.getId(), vertex.getEdgeValue(selectedNeighbor), selectedNeighbor);
+			
+			SetWritable<PathfinderVertexID> branchCandidates = vertexValue.getAcceptedConnections();
+			for(PathfinderVertexID candidate : branchCandidates){
+				if(isLogEnabled)
+					log.info("I'm gonna connect to fragment " + candidate + " as branch");
+				PathfinderVertexID selectedNeighbor = vertexValue.peekSetOutOfStack(candidate).peek();
+				Toolbox.setEdgeAsBranch(vertex, selectedNeighbor);	
+				Toolbox.setRemoteEdgeAsBranch(this, vertex.getId(), vertex.getEdgeValue(selectedNeighbor), selectedNeighbor);
+			}
+
 		}
 	}
 
