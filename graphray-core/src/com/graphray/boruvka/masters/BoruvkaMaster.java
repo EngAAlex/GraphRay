@@ -82,9 +82,10 @@ public class BoruvkaMaster {
 					return false;
 			} catch (Exception e) {
 				e.printStackTrace();
-				master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.computationIncomplete)
-				.setValue(1);				
-				master.haltComputation();
+//				master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.computationIncomplete)
+//				.setValue(1);				
+//				master.haltComputation();
+				return true;
 			}
 		}
 
