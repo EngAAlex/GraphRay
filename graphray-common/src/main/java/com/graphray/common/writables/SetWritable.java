@@ -6,15 +6,12 @@ package com.graphray.common.writables;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.lang.reflect.ParameterizedType;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Stack;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
-
-import com.graphray.common.vertextypes.PathfinderVertexID;
 
 /**
  * @author spark
@@ -88,6 +85,8 @@ public class SetWritable<T extends Writable> implements Writable, Collection<T>{
 	public void readFields(DataInput in) throws IOException {
 		int size = in.readInt();
 		for(int i=0; i < size; i++){
+			//WARNING !!!!!! VULNERABILITY, POTENTIAL PROBLEMS WHILE DESERIALIZING
+			
 			T element = (T) WritableFactories.newInstance((Class<? extends Writable>)(getClass().getTypeParameters()[0].getClass()));
 			element.readFields(in);
 			internalState.add(i, element);

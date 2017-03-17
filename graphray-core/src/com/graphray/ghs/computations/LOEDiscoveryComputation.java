@@ -4,6 +4,7 @@
 package com.graphray.ghs.computations;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Stack;
 
@@ -244,7 +245,10 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 				//						continue; 
 				//					}
 				PathfinderVertexID currentSenderID = currentMessage.getSenderID();
-				PathfinderVertexID currentFragmentID = currentMessage.getFragmentID();				
+				PathfinderVertexID currentFragmentID = currentMessage.getFragmentID();		
+				
+				vertexValue.addToBoundary(currentSenderID.copy());
+				
 				double currentValue = currentMessage.get();
 				if(currentValue <= minLOE){
 					if(currentValue < minLOE){
@@ -291,6 +295,12 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 					//					aggregate(MSTPathfinderMasterCompute.cGHSProcedureCompletedAggregator, new BooleanWritable(false));					
 				}
 			}
+			
+			Collection<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.DUMMY, PathfinderEdgeType.BRANCH, PathfinderEdgeType.PATHFINDER);		
+			if(destinations == null)
+				return;
+			destinations.removeAll(vertexValue.getActiveBoundary());
+			vertexValue.replaceBoundarySet(destinations);
 		}		
 	}
 }

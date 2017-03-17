@@ -486,7 +486,6 @@ public class EdgeConnectionRoutine{
 				Toolbox.setEdgeAsBranch(vertex, selectedNeighbor);	
 				Toolbox.setRemoteEdgeAsBranch(this, vertex.getId(), vertex.getEdgeValue(selectedNeighbor), selectedNeighbor);
 			}
-
 		}
 	}
 

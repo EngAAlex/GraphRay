@@ -7,11 +7,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.Set;
 
-import org.apache.hadoop.io.BooleanWritable;
-import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 
@@ -34,6 +31,8 @@ public class PathfinderVertexType implements Writable{
 	protected boolean loesDepleted;
 	protected MapWritable loeAlternatives;
 	protected SetWritable<PathfinderVertexID> acceptedConnections;
+	
+	protected SetWritable<PathfinderVertexID> activeBoundary;
 
 	protected boolean clearedForConnection;
 	protected boolean pingedByRoot;
@@ -53,6 +52,7 @@ public class PathfinderVertexType implements Writable{
 		acceptedConnections = new SetWritable<PathfinderVertexID>();
 		lastConnectedFragments = new SetWritable<PathfinderVertexID>();
 		oldFragmentID = new PathfinderVertexID();
+		activeBoundary = new SetWritable<PathfinderVertexID>();
 	}	
 
 	/**
@@ -173,7 +173,8 @@ public class PathfinderVertexType implements Writable{
 	 * @param loeDestination the loeDestination to set
 	 */
 	public void addToLastConnectedFragments(PathfinderVertexID loeDestination) {
-		lastConnectedFragments.add(loeDestination);
+		if(!lastConnectedFragments.contains(loeDestination))
+			lastConnectedFragments.add(loeDestination);
 	}
 
 
@@ -312,8 +313,34 @@ public class PathfinderVertexType implements Writable{
 		acceptedConnections.clear();
 	}
 	
+	/**
+	 * @return the activeBoundary
+	 */
+	public SetWritable<PathfinderVertexID> getActiveBoundary() {
+		return activeBoundary;
+	}
+	
+	public void clearBoundary(){
+		activeBoundary.clear();
+	}
+
+	/**
+	 * @param activeBoundary the activeBoundary to set
+	 */
+	public void addToBoundary(PathfinderVertexID activeBoundaryToAdd) {
+		if(!activeBoundary.contains(activeBoundaryToAdd))
+			activeBoundary.add(activeBoundaryToAdd);
+	}
+
 	public void retainAcceptedConnections(Collection<PathfinderVertexID> collectionToRetain){
 		acceptedConnections.retainAll(collectionToRetain);
+	}
+	
+	public void replaceBoundarySet(Collection<PathfinderVertexID> setToReplace){
+		activeBoundary.clear();
+		for(PathfinderVertexID current : setToReplace)
+			if(!activeBoundary.contains(current))
+				activeBoundary.add(current.copy());
 	}
 
 	/**
@@ -408,6 +435,8 @@ public class PathfinderVertexType implements Writable{
 		branchConnection = in.readBoolean();
 		acceptedConnections.readFields(in);
 		oldFragmentID.readFields(in);
+		lastConnectedFragments.readFields(in);
+		activeBoundary.readFields(in);
 	}
 
 	/* (non-Javadoc)
@@ -421,11 +450,14 @@ public class PathfinderVertexType implements Writable{
 		out.writeDouble(fragmentLoeValue);
 		fragmentIdentity.write(out);
 		loeDestinationFragments.write(out);
+		out.writeBoolean(clearedForConnection);
 		loeAlternatives.write(out);
 		out.writeBoolean(pingedByRoot);
 		out.writeBoolean(branchConnection);
 		acceptedConnections.write(out);
 		oldFragmentID.write(out);
+		lastConnectedFragments.write(out);
+		activeBoundary.write(out);
 	}
 
 }

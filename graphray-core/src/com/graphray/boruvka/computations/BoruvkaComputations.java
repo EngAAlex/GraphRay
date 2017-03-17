@@ -13,6 +13,7 @@ import org.apache.hadoop.io.IntWritable;
 
 import com.graphray.GraphRayComputation;
 import com.graphray.common.edgetypes.PathfinderEdgeType;
+import com.graphray.common.messagetypes.ConnectedFragmentsSlimMessage;
 import com.graphray.common.messagetypes.ControlledGHSMessage;
 import com.graphray.common.vertextypes.PathfinderVertexID;
 import com.graphray.common.vertextypes.PathfinderVertexType;
@@ -217,7 +218,7 @@ public class BoruvkaComputations {
 						Toolbox.removeExistingDummies(this, vertex, currentDummy.copy());
 					}
 				}
-				
+
 				vertexValue.setFragmentIdentity(newFragmentID);
 
 				if(vertex.getEdgeValue(newFragmentID) == null){
@@ -234,7 +235,7 @@ public class BoruvkaComputations {
 		}
 	}
 
-	public static class BoruvkaUpdateConnectedFragmentsPing extends GraphRayComputation<ControlledGHSMessage, ControlledGHSMessage>{
+	public static class BoruvkaUpdateConnectedFragmentsPing extends GraphRayComputation<ControlledGHSMessage, ConnectedFragmentsSlimMessage>{
 
 		/* (non-Javadoc)
 		 * @see com.graphray.GraphRayComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
@@ -244,57 +245,83 @@ public class BoruvkaComputations {
 				Iterable<ControlledGHSMessage> messages) throws IOException {
 			super.compute(vertex, messages);
 			PathfinderVertexType vertexValue = vertex.getValue();
-
-			if(!vertexValue.isRoot())
-				return;
 			SetWritable<PathfinderVertexID> connectedFragments = vertexValue.getLastConnectedFragments();
+
+			if(!vertexValue.isRoot() || (vertexValue.isRoot() && connectedFragments.size() == 0))
+				return;
+			Collection<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.DUMMY, PathfinderEdgeType.BRANCH, PathfinderEdgeType.PATHFINDER);			
 			for(PathfinderVertexID connectedFragment : connectedFragments){
-				vertexValue.popSetOutOfStack(connectedFragment);			
-				if(connectedFragment != null){
-					if(isLogEnabled)
-						log.info("Informing cluster of connected fragment " + connectedFragment);
-					Collection<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.DUMMY, PathfinderEdgeType.BRANCH, PathfinderEdgeType.PATHFINDER);
-					if(destinations != null)
-						sendMessageToMultipleEdges(destinations.iterator(), new ControlledGHSMessage(vertex.getId(), connectedFragment, vertexValue.getFragmentLoeValue(), ControlledGHSMessage.ROOT_STATUS));
+				SetWritable<PathfinderVertexID> currentStack = vertexValue.popSetOutOfStack(connectedFragment);
+				//				if(connectedFragment != null){
+				//					if(destinations != null){
+				if(isLogEnabled)
+					log.info("Informing cluster of connected fragment " + connectedFragment);
+				//					}
+				//				}
+			}
+
+			if(isLogEnabled)
+				log.info("Size of connected fragments " + connectedFragments.size());
+
+			Collection<PathfinderVertexID> inactiveBoundary = vertexValue.getActiveBoundary();
+
+			if(destinations != null){
+				if(inactiveBoundary != null)			
+					destinations.removeAll(inactiveBoundary);
+				if(destinations.size() > 0){
+					ConnectedFragmentsSlimMessage toSend = new ConnectedFragmentsSlimMessage(vertex.getId(), vertexValue.getFragmentLoeValue());
+					toSend.setSetOfFragments(connectedFragments);
+					//				for(PathfinderVertexID destination : destinations)
+					//					sendMessage(destination, toSend.copy());
+					sendMessageToMultipleEdges(destinations.iterator(), toSend);
 				}
 			}
 		}		
 	}
 
-	public static class BoruvkaUpdateConnectedFragmentsReply extends GraphRayComputation<ControlledGHSMessage, ControlledGHSMessage>{
+	public static class BoruvkaUpdateConnectedFragmentsReply extends GraphRayComputation<ConnectedFragmentsSlimMessage, ControlledGHSMessage>{
 
 		/* (non-Javadoc)
 		 * @see com.graphray.GraphRayComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
 		 */
 		@Override
 		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
-				Iterable<ControlledGHSMessage> messages) throws IOException {
+				Iterable<ConnectedFragmentsSlimMessage> messages) throws IOException {
 			super.compute(vertex, messages);
 			PathfinderVertexType vertexValue = vertex.getValue();
 			SetWritable<PathfinderVertexID> stackToUpdate = null;
 			HashSet<PathfinderVertexID> stackToExclude = null;
 
-			for(ControlledGHSMessage msg : messages){
-				PathfinderVertexID msgFragment = msg.getFragmentID();
-				double fragmentLOE = msg.get();
-				if(msg.getSenderID().equals(vertexValue.getFragmentIdentity())){
-					stackToUpdate = vertexValue.popSetOutOfStack(msgFragment);
-					if(stackToUpdate == null)
-						continue;
+			vertexValue.clearBoundary();
 
-					if(isLogEnabled)
-						log.info("updating last connected fragment -- removing from stack " + msgFragment);
-					
-					if(fragmentLOE == vertexValue.getLOE()){
-						for(PathfinderVertexID e : stackToUpdate)
-							if(vertex.getEdgeValue(e).unassigned()){
-								if(isLogEnabled)
-									log.info("Pathfinder connection " + e);
-								Toolbox.updateEdgeValueWithStatus(vertex, PathfinderEdgeType.PATHFINDER, e);//(vertex, stackToUpdate);	
-								if(stackToExclude == null)
-									stackToExclude = new HashSet<PathfinderVertexID>();
-								stackToExclude.add(e.copy());
-							}
+			for(ConnectedFragmentsSlimMessage msg : messages){
+				//				PathfinderVertexID msgFragment = msg.getFragmentID();
+				double fragmentLOE = msg.get();
+				Collection<PathfinderVertexID> connectedFragments = msg.getSetOfFragments();
+				if(isLogEnabled)
+					log.info("Received from " + msg.getSenderID() + " stack of size " + connectedFragments.size());
+				if(msg.getSenderID().equals(vertexValue.getFragmentIdentity())){
+					for(PathfinderVertexID msgFragment : connectedFragments){
+						if(isLogEnabled)
+							log.info("Received fragment " + msgFragment);
+						stackToUpdate = vertexValue.popSetOutOfStack(msgFragment);
+						if(stackToUpdate == null)
+							continue;
+
+						if(isLogEnabled)
+							log.info("updating last connected fragment -- removing from stack " + msgFragment);
+
+						if(fragmentLOE == vertexValue.getLOE()){
+							for(PathfinderVertexID e : stackToUpdate)
+								if(vertex.getEdgeValue(e).unassigned()){
+									if(isLogEnabled)
+										log.info("Pathfinder connection " + e);
+									Toolbox.updateEdgeValueWithStatus(vertex, PathfinderEdgeType.PATHFINDER, e);//(vertex, stackToUpdate);	
+									if(stackToExclude == null)
+										stackToExclude = new HashSet<PathfinderVertexID>();
+									stackToExclude.add(e.copy());
+								}
+						}
 					}
 				}
 				//				}
@@ -305,17 +332,17 @@ public class BoruvkaComputations {
 			if(oldFragment != null){
 				vertexValue.popSetOutOfStack(oldFragment);
 				//if(/*vertexValue.isStackEmpty() && */!vertexValue.hasLOEsDepleted()){
-					Collection<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.UNASSIGNED);
-					if(destinations != null){
+				Collection<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.UNASSIGNED);
+				if(destinations != null){
 
-						if(stackToExclude != null)
-							destinations.removeAll(stackToExclude);
-						if(isLogEnabled)
-							log.info("Informing unassigned edges about my new fragment");
+					if(stackToExclude != null)
+						destinations.removeAll(stackToExclude);
+					if(isLogEnabled)
+						log.info("Informing unassigned edges about my new fragment");
 
-						sendMessageToMultipleEdges(destinations.iterator(), new ControlledGHSMessage(vertex.getId(), vertexValue.getFragmentIdentity(), ControlledGHSMessage.ROOT_UPDATE));
-						sendMessageToMultipleEdges(destinations.iterator(), new ControlledGHSMessage(vertex.getId(), oldFragment, ControlledGHSMessage.ROOT_STATUS));					
-					}
+					sendMessageToMultipleEdges(destinations.iterator(), new ControlledGHSMessage(vertex.getId(), vertexValue.getFragmentIdentity(), ControlledGHSMessage.ROOT_UPDATE));
+					sendMessageToMultipleEdges(destinations.iterator(), new ControlledGHSMessage(vertex.getId(), oldFragment, ControlledGHSMessage.ROOT_STATUS));					
+				}
 
 			}
 		}
