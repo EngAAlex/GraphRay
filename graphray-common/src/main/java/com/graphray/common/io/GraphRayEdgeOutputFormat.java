@@ -37,7 +37,10 @@ public class GraphRayEdgeOutputFormat extends TextEdgeOutputFormat<PathfinderVer
 		@Override
 		protected Text convertEdgeToLine(PathfinderVertexID src, PathfinderVertexType srcValue,
 				Edge<PathfinderVertexID, PathfinderEdgeType> edge) throws IOException {
-			return new Text(src.get() + "\t" + edge.getTargetVertexId().get() + "\t" + edge.getValue().get() + "\t" + PathfinderEdgeType.CODE_STRINGS[edge.getValue().getStatus()]);
+			if(edge.getValue().isBranch() || edge.getValue().isPathfinder())
+				return new Text(src.get() + "\t" + edge.getTargetVertexId().get() + "\t" + edge.getValue().get() + "\t" + PathfinderEdgeType.CODE_STRINGS[edge.getValue().getStatus()]);
+			else
+				return new Text("");
 		}
 		
 	}

@@ -4,10 +4,10 @@
 package com.graphray.ghs.computations;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.Stack;
 
+import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
@@ -15,6 +15,7 @@ import org.apache.hadoop.io.Writable;
 import com.graphray.GraphRayComputation;
 import com.graphray.common.edgetypes.PathfinderEdgeType;
 import com.graphray.common.messagetypes.ControlledGHSMessage;
+import com.graphray.common.messagetypes.SlimControlledGHSMessage;
 import com.graphray.common.vertextypes.PathfinderVertexID;
 import com.graphray.common.vertextypes.PathfinderVertexType;
 import com.graphray.common.writables.SetWritable;
@@ -22,7 +23,7 @@ import com.graphray.utils.Toolbox;
 
 
 
-public abstract class LOEDiscoveryComputation extends GraphRayComputation<ControlledGHSMessage, ControlledGHSMessage>{
+public abstract class LOEDiscoveryComputation extends GraphRayComputation<SlimControlledGHSMessage, SlimControlledGHSMessage>{
 
 	/**
 	 * @author spark
@@ -36,7 +37,7 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 		 */
 		@Override
 		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
-				Iterable<ControlledGHSMessage> messages) throws IOException {
+				Iterable<SlimControlledGHSMessage> messages) throws IOException {
 			super.compute(vertex, messages);
 
 			PathfinderVertexType vertexValue = vertex.getValue();
@@ -45,28 +46,29 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 				return;
 
 			if(vertex.getNumEdges() == 1){
-				PathfinderVertexID neighbor = vertex.getEdges().iterator().next().getTargetVertexId().copy();
-				if(!vertex.getEdgeValue(neighbor).isBranch()){
-					Toolbox.setEdgeAsBranch(vertex, neighbor);
-					sendMessage(neighbor, new ControlledGHSMessage(vertex.getId().copy(), ControlledGHSMessage.FORCE_ACCEPT));
+				Edge<PathfinderVertexID, PathfinderEdgeType> neighbor = vertex.getEdges().iterator().next();
+				if(!neighbor.getValue().isBranch()){
+					Toolbox.setEdgeAsBranch(vertex, neighbor.getTargetVertexId().copy());
+					Toolbox.setRemoteEdgeAsBranch(this, vertex.getId(), neighbor.getValue(), neighbor.getTargetVertexId().copy());
+//					sendMessage(neighbor, new SlimControlledGHSMessage(vertex.getId().copy(), new PathfinderVertexID(-1)));
 					vertexValue.deactivateForBoruvka();
 					vertexValue.setRoot(false);
 					vertexValue.loesDepleted();
 				}
 				return;
 			}
+			
+//			vertexValue.getReadyForNextRound();
 
-			vertexValue.getReadyForNextRound();
+//			if(!vertexValue.isStackEmpty()){
+//				if(isLogEnabled)
+//					log.info("available loes in stack " + vertexValue.stackSize());
+//				return;
+//			}else
+//				if(isLogEnabled)
+//					log.info("Staack emptied, looking for new loes");
 
-			if(!vertexValue.isStackEmpty()){
-				if(isLogEnabled)
-					log.info("available loes in stack " + vertexValue.stackSize());
-				return;
-			}else
-				if(isLogEnabled)
-					log.info("Staack emptied, looking for new loes");
-
-			vertexValue.resetLOE();
+//			vertexValue.resetLOE();
 			Stack<PathfinderVertexID> loes = null;
 
 			//Check for unassigned
@@ -88,21 +90,20 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 				if(isLogEnabled)
 					log.info("sending test message to " + candidate.get());
 				sendMessage(candidate, 
-						new ControlledGHSMessage(vertex.getId(), 
-								vertexValue.getFragmentIdentity().copy(), 
-								ControlledGHSMessage.TEST_MESSAGE));
+						new SlimControlledGHSMessage(vertex.getId(), 
+								vertexValue.getFragmentIdentity().copy()));
 			}
 		}	
 	}
 
-	public static class LOEDiscoveryTEST_REPLY extends LOEDiscoveryComputation{
+	public static class LOEDiscoveryTEST_REPLY extends GraphRayComputation<SlimControlledGHSMessage, ControlledGHSMessage>{
 
 		/* (non-Javadoc)
 		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
 		 */
 		@Override
 		public void compute(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
-				Iterable<ControlledGHSMessage> messages) throws IOException {
+				Iterable<SlimControlledGHSMessage> messages) throws IOException {
 			super.compute(vertex, messages);
 			
 			if(vertex.getNumEdges() == 1)
@@ -111,16 +112,16 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 			PathfinderVertexID vertexId = vertex.getId();
 			PathfinderVertexType vertexValue = vertex.getValue();
 			PathfinderVertexID myFragment = vertexValue.getFragmentIdentity();
-			Iterator<ControlledGHSMessage> msgIterator = messages.iterator();
+			Iterator<SlimControlledGHSMessage> msgIterator = messages.iterator();
 			//			double myLOE = vertexValue.getLOE();
 			while(msgIterator.hasNext()){				
-				ControlledGHSMessage currentMessage = msgIterator.next();
+				SlimControlledGHSMessage currentMessage = msgIterator.next();
 				PathfinderVertexID remoteSenderID = currentMessage.getSenderID().copy();
 				PathfinderVertexID remoteFragment = currentMessage.getFragmentID().copy();
-				short currentMessageCode = currentMessage.getStatus();
+//				short currentMessageCode = currentMessage.getStatus();
 				if(isLogEnabled)				
 					log.info("received fragment " + remoteFragment);
-				if(currentMessageCode == ControlledGHSMessage.TEST_MESSAGE){ 
+//				if(remoteFragment.get() != -1){// ControlledGHSMessage.TEST_MESSAGE){ 
 					if(!myFragment.equals(remoteFragment)){ //connection accepted
 						//						if(vertex.getEdgeValue(remoteSenderID).get() <= myLOE){
 						if(isLogEnabled)
@@ -135,19 +136,20 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 						sendMessage(remoteSenderID.copy(), 
 								new ControlledGHSMessage(vertexId.copy(), ControlledGHSMessage.REFUSE_MESSAGE));
 						removeEdgesRequest(vertexId, remoteSenderID);
-						vertexValue.popSetOutOfStack(remoteFragment);						
+//						vertexValue.popSetOutOfStack(remoteFragment);						
 					}
-				}else if(currentMessageCode == ControlledGHSMessage.FORCE_ACCEPT){
-					if(isLogEnabled)
-						log.info("Force-accepting vertex " + remoteSenderID);
-					Toolbox.setEdgeAsBranch(vertex, remoteSenderID);
-					sendMessage(remoteSenderID, new ControlledGHSMessage(vertexId, ControlledGHSMessage.ROOT_UPDATE));
 				}
-			}
+//				else{
+//					if(isLogEnabled)
+//						log.info("Force-accepting vertex " + remoteSenderID);
+//					Toolbox.setEdgeAsBranch(vertex, remoteSenderID);
+//					sendMessage(remoteSenderID, new ControlledGHSMessage(vertexId, ControlledGHSMessage.ROOT_UPDATE));
+//				}
+//			}
 		}		
 	}
 
-	public static class LOEDiscoveryREPORT_GENERATION extends LOEDiscoveryComputation{
+	public static class LOEDiscoveryREPORT_GENERATION extends GraphRayComputation<ControlledGHSMessage, ControlledGHSMessage>{
 
 		/* (non-Javadoc)
 		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
@@ -171,7 +173,7 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 					if(isLogEnabled)
 						log.info("Received a refuse message from " + senderID + " removing from " + vertex.getId() + " to " + senderID);
 					removeEdgesRequest(vertexId, senderID); 
-					vertexValue.popSetOutOfStack(remoteFragment);
+//					vertexValue.popSetOutOfStack(remoteFragment);
 					break;						
 				case ControlledGHSMessage.ACCEPT_MESSAGE:
 					if(vertex.getEdgeValue(senderID).isBranch())
@@ -181,11 +183,11 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 					if(isLogEnabled)
 						log.info("Received a accept message from " + senderID);
 					break;
-				case ControlledGHSMessage.ROOT_UPDATE:
-					vertexValue.setFragmentIdentity(remoteFragment);
-					if(isLogEnabled)
-						log.info("Updated root after force-accept");
-					return;
+//				case ControlledGHSMessage.ROOT_UPDATE:
+//					vertexValue.setFragmentIdentity(remoteFragment);
+//					if(isLogEnabled)
+//						log.info("Updated root after force-accept");
+//					return;
 					//break;
 				}
 			}
@@ -213,7 +215,7 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 		}	
 	}
 
-	public static class LOEDiscoveryREPORT_DELIVERY extends LOEDiscoveryComputation {
+	public static class LOEDiscoveryREPORT_DELIVERY extends GraphRayComputation<ControlledGHSMessage, ControlledGHSMessage> {
 
 		/* (non-Javadoc)
 		 * @see unipg.pathfinder.PathfinderComputation#compute(org.apache.giraph.graph.Vertex, java.lang.Iterable)
@@ -247,7 +249,7 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 				PathfinderVertexID currentSenderID = currentMessage.getSenderID();
 				PathfinderVertexID currentFragmentID = currentMessage.getFragmentID();		
 				
-				vertexValue.addToBoundary(currentSenderID.copy());
+//				vertexValue.addToBoundary(currentSenderID.copy());
 				
 				double currentValue = currentMessage.get();
 				if(currentValue <= minLOE){
@@ -296,11 +298,11 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<Contro
 				}
 			}
 			
-			Collection<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.DUMMY, PathfinderEdgeType.BRANCH, PathfinderEdgeType.PATHFINDER);		
-			if(destinations == null)
-				return;
-			destinations.removeAll(vertexValue.getActiveBoundary());
-			vertexValue.replaceBoundarySet(destinations);
+//			Collection<PathfinderVertexID> destinations = Toolbox.getSpecificEdgesForVertex(vertex, PathfinderEdgeType.DUMMY, PathfinderEdgeType.BRANCH, PathfinderEdgeType.PATHFINDER);		
+//			if(destinations == null)
+//				return;
+//			destinations.removeAll(vertexValue.getActiveBoundary());
+//			vertexValue.replaceBoundarySet(destinations);
 		}		
 	}
 }

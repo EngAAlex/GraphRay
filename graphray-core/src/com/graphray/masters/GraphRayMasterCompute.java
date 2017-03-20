@@ -58,12 +58,15 @@ public class GraphRayMasterCompute extends DefaultMasterCompute {
 		
 		if(stage == 1){
 			if(boruvka.compute()){
-				setComputation(DummyEdgesCleanupComputation.class);
-				stage = 2;
-				return;
+				haltComputation();
+//				setComputation(DummyEdgesCleanupComputation.class);
+//				stage = 2;
+//				return;
 			}
-		}else
-			setComputation(NOOPComputation.class);
+		}
+//		else
+//			haltComputation();
+//			setComputation(NOOPComputation.class);
 	}
 	
 	

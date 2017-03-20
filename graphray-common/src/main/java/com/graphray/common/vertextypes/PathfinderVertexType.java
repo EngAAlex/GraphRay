@@ -25,14 +25,14 @@ public class PathfinderVertexType implements Writable{
 	protected PathfinderVertexID fragmentIdentity;
 	protected double loeValue;
 	protected double fragmentLoeValue;
-	protected PathfinderVertexID oldFragmentID;
-	protected SetWritable<PathfinderVertexID> lastConnectedFragments;
+//	protected PathfinderVertexID oldFragmentID;
+//	protected SetWritable<PathfinderVertexID> lastConnectedFragments;
 	protected SetWritable<PathfinderVertexID> loeDestinationFragments;	
 	protected boolean loesDepleted;
 	protected MapWritable loeAlternatives;
 	protected SetWritable<PathfinderVertexID> acceptedConnections;
 	
-	protected SetWritable<PathfinderVertexID> activeBoundary;
+//	protected SetWritable<PathfinderVertexID> activeBoundary;
 
 	protected boolean clearedForConnection;
 	protected boolean pingedByRoot;
@@ -50,9 +50,9 @@ public class PathfinderVertexType implements Writable{
 		loeDestinationFragments = new SetWritable<PathfinderVertexID>();		
 		loeAlternatives = new MapWritable();
 		acceptedConnections = new SetWritable<PathfinderVertexID>();
-		lastConnectedFragments = new SetWritable<PathfinderVertexID>();
-		oldFragmentID = new PathfinderVertexID();
-		activeBoundary = new SetWritable<PathfinderVertexID>();
+//		lastConnectedFragments = new SetWritable<PathfinderVertexID>();
+//		oldFragmentID = new PathfinderVertexID();
+//		activeBoundary = new SetWritable<PathfinderVertexID>();
 	}	
 
 	/**
@@ -84,14 +84,16 @@ public class PathfinderVertexType implements Writable{
 	}
 
 	public void getReadyForNextRound(){
-		lastConnectedFragments.clear();
-		loeDestinationFragments.clear();
-		oldFragmentID = null;
+		resetLOEStack();
+//		lastConnectedFragments.clear();
+		loeDestinationFragments = new SetWritable<PathfinderVertexID>();
+//		oldFragmentID = null;
 		clearedForConnection = false;
-		acceptedConnections.clear();
+		acceptedConnections.clear(); //= new SetWritable<PathfinderVertexID>();
 		setPingedByRoot(false);
 		branchConnection = false;
-		fragmentLoeValue = Double.MAX_VALUE;
+//		fragmentLoeValue = Double.MAX_VALUE;
+		resetLOE();
 	}
 	/**
 	 * 
@@ -109,7 +111,8 @@ public class PathfinderVertexType implements Writable{
 	}
 
 	public void resetLOEStack(){
-		loeAlternatives.clear();;
+//		loeAlternatives.clear();;
+		loeAlternatives = new MapWritable();
 	}
 
 	/**
@@ -135,19 +138,19 @@ public class PathfinderVertexType implements Writable{
 	
 
 	
-	/**
-	 * @return
-	 */
-	public PathfinderVertexID getOldFragmentID() {
-		return oldFragmentID;
-	}
-	
-	/**
-	 * @param oldFragmentID the oldFragmentID to set
-	 */
-	public void setOldFragmentID(PathfinderVertexID oldFragmentID) {
-		this.oldFragmentID = oldFragmentID;
-	}
+//	/**
+//	 * @return
+//	 */
+//	public PathfinderVertexID getOldFragmentID() {
+//		return oldFragmentID;
+//	}
+//	
+//	/**
+//	 * @param oldFragmentID the oldFragmentID to set
+//	 */
+//	public void setOldFragmentID(PathfinderVertexID oldFragmentID) {
+//		this.oldFragmentID = oldFragmentID;
+//	}
 
 	public void clearAcceptedConnections(){
 		acceptedConnections.clear();
@@ -169,18 +172,18 @@ public class PathfinderVertexType implements Writable{
 		return acceptedConnections;
 	}
 	
-	/**
-	 * @param loeDestination the loeDestination to set
-	 */
-	public void addToLastConnectedFragments(PathfinderVertexID loeDestination) {
-		if(!lastConnectedFragments.contains(loeDestination))
-			lastConnectedFragments.add(loeDestination);
-	}
-
-
-	public SetWritable<PathfinderVertexID> getLastConnectedFragments(){
-		return this.lastConnectedFragments;
-	}
+//	/**
+//	 * @param loeDestination the loeDestination to set
+//	 */
+//	public void addToLastConnectedFragments(PathfinderVertexID loeDestination) {
+//		if(!lastConnectedFragments.contains(loeDestination))
+//			lastConnectedFragments.add(loeDestination);
+//	}
+//
+//
+//	public SetWritable<PathfinderVertexID> getLastConnectedFragments(){
+//		return this.lastConnectedFragments;
+//	}
 
 	/**
 	 * @return the loeDestinationFragment
@@ -232,10 +235,10 @@ public class PathfinderVertexType implements Writable{
 	public SetWritable<PathfinderVertexID> popSetOutOfStack(PathfinderVertexID setToPop){
 		return (SetWritable<PathfinderVertexID>) loeAlternatives.remove(setToPop);
 	}
-	
-	public boolean isAcceptedFragment(PathfinderVertexID test){
-		return loeAlternatives.containsKey(test);
-	}
+//	
+//	public boolean isAcceptedFragment(PathfinderVertexID test){
+//		return loeAlternatives.containsKey(test);
+//	}
 	
 	public boolean isStackEmpty(){
 		return loeAlternatives.isEmpty();
@@ -259,29 +262,29 @@ public class PathfinderVertexType implements Writable{
 		this.loesDepleted = false;
 	}
 	
-	/**
-	 * @param senderID
-	 * @param fragmentID
-	 */
-	public void addVertexToFragment(PathfinderVertexID senderID, PathfinderVertexID fragmentID) {
-		if(!loeAlternatives.containsKey(fragmentID))
-			loeAlternatives.put(fragmentID.copy(), new SetWritable<PathfinderVertexID>());
-		((SetWritable<PathfinderVertexID>)loeAlternatives.get(fragmentID)).add(senderID.copy());
-	}
-
-	/**
-	 * @param senderID
-	 * @param fragmentI
-	 */
-	public void removeVertexFromFragment(PathfinderVertexID senderID, PathfinderVertexID fragmentID) {
-		if(loeAlternatives.containsKey(fragmentID)){
-			SetWritable<PathfinderVertexID> currentSet = (SetWritable<PathfinderVertexID>) loeAlternatives.get(fragmentID);
-			currentSet.remove(senderID);
-			if(currentSet.size() == 0){
-				loeAlternatives.remove(fragmentID);
-			}
-		}
-	}
+//	/**
+//	 * @param senderID
+//	 * @param fragmentID
+//	 */
+//	public void addVertexToFragment(PathfinderVertexID senderID, PathfinderVertexID fragmentID) {
+//		if(!loeAlternatives.containsKey(fragmentID))
+//			loeAlternatives.put(fragmentID.copy(), new SetWritable<PathfinderVertexID>());
+//		((SetWritable<PathfinderVertexID>)loeAlternatives.get(fragmentID)).add(senderID.copy());
+//	}
+//
+//	/**
+//	 * @param senderID
+//	 * @param fragmentI
+//	 */
+//	public void removeVertexFromFragment(PathfinderVertexID senderID, PathfinderVertexID fragmentID) {
+//		if(loeAlternatives.containsKey(fragmentID)){
+//			SetWritable<PathfinderVertexID> currentSet = (SetWritable<PathfinderVertexID>) loeAlternatives.get(fragmentID);
+//			currentSet.remove(senderID);
+//			if(currentSet.size() == 0){
+//				loeAlternatives.remove(fragmentID);
+//			}
+//		}
+//	}
 	
 	/**
 	 * @param fragment
@@ -313,35 +316,35 @@ public class PathfinderVertexType implements Writable{
 		acceptedConnections.clear();
 	}
 	
-	/**
-	 * @return the activeBoundary
-	 */
-	public SetWritable<PathfinderVertexID> getActiveBoundary() {
-		return activeBoundary;
-	}
-	
-	public void clearBoundary(){
-		activeBoundary.clear();
-	}
+//	/**
+//	 * @return the activeBoundary
+//	 */
+//	public SetWritable<PathfinderVertexID> getActiveBoundary() {
+//		return activeBoundary;
+//	}
+//	
+//	public void clearBoundary(){
+//		activeBoundary.clear();
+//	}
 
-	/**
-	 * @param activeBoundary the activeBoundary to set
-	 */
-	public void addToBoundary(PathfinderVertexID activeBoundaryToAdd) {
-		if(!activeBoundary.contains(activeBoundaryToAdd))
-			activeBoundary.add(activeBoundaryToAdd);
-	}
+//	/**
+//	 * @param activeBoundary the activeBoundary to set
+//	 */
+//	public void addToBoundary(PathfinderVertexID activeBoundaryToAdd) {
+//		if(!activeBoundary.contains(activeBoundaryToAdd))
+//			activeBoundary.add(activeBoundaryToAdd);
+//	}
 
 	public void retainAcceptedConnections(Collection<PathfinderVertexID> collectionToRetain){
 		acceptedConnections.retainAll(collectionToRetain);
 	}
 	
-	public void replaceBoundarySet(Collection<PathfinderVertexID> setToReplace){
-		activeBoundary.clear();
-		for(PathfinderVertexID current : setToReplace)
-			if(!activeBoundary.contains(current))
-				activeBoundary.add(current.copy());
-	}
+//	public void replaceBoundarySet(Collection<PathfinderVertexID> setToReplace){
+//		activeBoundary.clear();
+//		for(PathfinderVertexID current : setToReplace)
+//			if(!activeBoundary.contains(current))
+//				activeBoundary.add(current.copy());
+//	}
 
 	/**
 	 * @return the boruvkaStatus
@@ -434,9 +437,9 @@ public class PathfinderVertexType implements Writable{
 		pingedByRoot = in.readBoolean();
 		branchConnection = in.readBoolean();
 		acceptedConnections.readFields(in);
-		oldFragmentID.readFields(in);
-		lastConnectedFragments.readFields(in);
-		activeBoundary.readFields(in);
+//		oldFragmentID.readFields(in);
+//		lastConnectedFragments.readFields(in);
+//		activeBoundary.readFields(in);
 	}
 
 	/* (non-Javadoc)
@@ -455,9 +458,9 @@ public class PathfinderVertexType implements Writable{
 		out.writeBoolean(pingedByRoot);
 		out.writeBoolean(branchConnection);
 		acceptedConnections.write(out);
-		oldFragmentID.write(out);
-		lastConnectedFragments.write(out);
-		activeBoundary.write(out);
+//		oldFragmentID.write(out);
+//		lastConnectedFragments.write(out);
+//		activeBoundary.write(out);
 	}
 
 }

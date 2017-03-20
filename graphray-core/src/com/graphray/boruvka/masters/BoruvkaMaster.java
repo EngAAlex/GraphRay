@@ -7,14 +7,12 @@ import org.apache.giraph.master.MasterCompute;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.log4j.Logger;
 
+import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaFindRemainingPathfinders;
 import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaRootUpdateCompletion;
 import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaRootUpdateConfirmationCompletion;
 import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaRootUpdateConfirmationPing;
 import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaRootUpdateConfirmationReply;
 import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaRootUpdateSetup;
-import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaUnassignedEdgesFinalUpdate;
-import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaUpdateConnectedFragmentsPing;
-import com.graphray.boruvka.computations.BoruvkaComputations.BoruvkaUpdateConnectedFragmentsReply;
 import com.graphray.ghs.computations.EdgeConnectionRoutine;
 import com.graphray.ghs.masters.LOEDiscoveryMaster;
 import com.graphray.masters.GraphRayMasterCompute;
@@ -47,17 +45,16 @@ public class BoruvkaMaster {
 	 */
 	public boolean compute() {				
 		if(counter == 0){
-			if(master.getComputation().equals(BoruvkaUnassignedEdgesFinalUpdate.class)){
+			if(master.getComputation().equals(BoruvkaFindRemainingPathfinders.class)){ //BoruvkaUnassignedEdgesFinalUpdate
 				int remainingFragments = ((IntWritable)master.getAggregatedValue(GraphRayMasterCompute.boruvkaProcedureCompletedAggregator)).get();
+				master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.remainingFragments)
+				.setValue(remainingFragments);
 				if(remainingFragments == 1){
-					master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.remainingFragments)
-					.setValue(0);
+//					master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.remainingFragments)
+//					.setValue(0);
 					return true;
 				}else{
-					master.getContext().getCounter(GraphRayMasterCompute.counterGroup, GraphRayMasterCompute.remainingFragments)
-					.setValue(remainingFragments);
 					master.setAggregatedValue(GraphRayMasterCompute.boruvkaProcedureCompletedAggregator, new IntWritable(0));
-					log.info("Remaining fragments " + remainingFragments);
 				}
 			}
 
@@ -109,20 +106,28 @@ public class BoruvkaMaster {
 		}else if(counter == 6){
 			master.setComputation(BoruvkaRootUpdateCompletion.class);
 			counter++;
-			return false;
-		}else if(counter == 7){
-			master.setComputation(BoruvkaUpdateConnectedFragmentsPing.class);
-			counter++;
-			return false;
-		}else if(counter == 8){
-			master.setComputation(BoruvkaUpdateConnectedFragmentsReply.class);
-			counter++;
-			return false;
-		}else if(counter == 9){
-			master.setComputation(BoruvkaUnassignedEdgesFinalUpdate.class);
-			counter = 0;
+//			counter = 0;
 			return false;
 		}
+		else if(counter == 7){
+		master.setComputation(BoruvkaFindRemainingPathfinders.class);
+		counter = 0;
+		return false;
+	}		
+//		else if(counter == 7){
+//			master.setComputation(BoruvkaUpdateConnectedFragmentsPing.class);
+//			counter++;
+//			return false;
+//		}
+//		else if(counter == 8){
+//			master.setComputation(BoruvkaUpdateConnectedFragmentsReply.class);
+//			counter++;
+//			return false;
+//		}else if(counter == 9){
+//			master.setComputation(BoruvkaUnassignedEdgesFinalUpdate.class);
+//			counter = 0;
+//			return false;
+//		}
 
 		return true;
 	}

@@ -43,6 +43,20 @@ public class Toolbox {
 		return edgesToUse;
 	}
 	
+	public static Collection<PathfinderVertexID> getUnassignedEdgesByWeight(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, double value){
+		HashSet<PathfinderVertexID> edgesToUse = null;
+		Iterator<Edge<PathfinderVertexID, PathfinderEdgeType>> edges = vertex.getEdges().iterator();
+		while(edges.hasNext()){
+			Edge<PathfinderVertexID, PathfinderEdgeType> current = edges.next();
+			if(current.getValue().unassigned() && current.getValue().get() == value){
+				if(edgesToUse == null)
+					edgesToUse = new HashSet<PathfinderVertexID>();
+				edgesToUse.add(current.getTargetVertexId().copy());
+			}
+		}
+		return edgesToUse;
+	}
+	
 	public static Stack<PathfinderVertexID> getLOEsForVertex(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex){
 		return getLOEsForVertex(vertex, PathfinderEdgeType.UNASSIGNED);
 	}
@@ -178,7 +192,7 @@ public class Toolbox {
 
 	public static void updateEdgeValueWithStatus(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short newStatus, PathfinderVertexID recipient){
 		PathfinderEdgeType pet = vertex.getEdgeValue(recipient);
-//		log.info("Setting edge from " + vertex.getId() + " to " + recipient + " as " + PathfinderEdgeType.CODE_STRINGS[newStatus]);
+//		Logger.getLogger(Toolbox.class).info("Setting edge from " + vertex.getId() + " to " + recipient + " as " + PathfinderEdgeType.CODE_STRINGS[newStatus]);
 		vertex.setEdgeValue(recipient, new PathfinderEdgeType(pet.get(), newStatus));		
 	}
 

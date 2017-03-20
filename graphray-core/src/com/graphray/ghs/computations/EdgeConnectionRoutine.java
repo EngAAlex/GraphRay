@@ -106,7 +106,7 @@ public class EdgeConnectionRoutine{
 					continue;
 				}
 				if(msgStatus == ControlledGHSMessage.ROOT_STATUS){
-					rootStatusMessageReceived(vertexId, vertexValue, msgFragmentIdentity);
+//					rootStatusMessageReceived(vertexId, vertexValue, msgFragmentIdentity);
 					continue;
 				}
 
@@ -199,7 +199,7 @@ public class EdgeConnectionRoutine{
 				if(isLogEnabled)
 					log.info("Updating my Boruvka Root with " + newRoot);
 				vertexValue.deactivateForBoruvka();
-				vertexValue.setOldFragmentID(vertexValue.getFragmentIdentity());			
+//				vertexValue.setOldFragmentID(vertexValue.getFragmentIdentity());			
 				vertexValue.setFragmentIdentity(newRoot.copy());
 			}
 		}
@@ -213,13 +213,14 @@ public class EdgeConnectionRoutine{
 						log.info("informed my root " + vertexValue.getFragmentIdentity() + " to change the fragment identity");
 					sendMessage(vertexValue.getFragmentIdentity(), new ControlledGHSMessage(vertexId, selectedFragment.copy(), ControlledGHSMessage.ROOT_UPDATE));
 				}
-			}else
-				rootStatusMessageReceived(vertexId, vertexValue, selectedFragment);
+			}
+//			else
+//				rootStatusMessageReceived(vertexId, vertexValue, selectedFragment);
 		}
 
 		public void rootStatusMessageReceived(PathfinderVertexID vertexId, PathfinderVertexType vertexValue, PathfinderVertexID selectedFragment){
 			if(vertexValue.isRoot()){
-				vertexValue.addToLastConnectedFragments(selectedFragment.copy());
+//				vertexValue.addToLastConnectedFragments(selectedFragment.copy());
 //				vertexValue.popSetOutOfStack(selectedFragment);
 				if(isLogEnabled)
 					log.info("setting last connected fragment " + selectedFragment);
