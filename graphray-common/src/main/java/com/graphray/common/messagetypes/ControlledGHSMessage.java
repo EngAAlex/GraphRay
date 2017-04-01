@@ -30,7 +30,8 @@ public class ControlledGHSMessage extends DoubleWritable{
 	
 	public static final short FORCE_ACCEPT = 6;
 	public static final short LOEs_DEPLETED = 5;
-	public static final short CONNECT_AS_BRANCH = 42;	
+	public static final short CONNECT_AS_BRANCH = 43;		
+	public static final short CONNECT_AS_BRANCH_FROM_ROOT = 42;	
 	public static final short CONNECT_REPLY = 41;		
 	public static final short CONNECT_TEST = 40;	
 	public static final short CONNECT_FROM_ROOT_MESSAGE = 400;	

@@ -31,7 +31,10 @@ public class SetWritable<T extends Writable> implements Writable, Collection<T>{
 	}
 
 	public boolean add(T e){
-		return internalState.add(e);
+		if(!internalState.contains(e))
+			return internalState.add(e);
+		else
+			return false;
 	}
 
 	/* (non-Javadoc)
@@ -48,7 +51,7 @@ public class SetWritable<T extends Writable> implements Writable, Collection<T>{
 	 */
 	public void addIfNotExistingAll(SetWritable<T> recipientsForFragment) {
 		for(T current : recipientsForFragment)
-			if(internalState.contains(current))
+			if(!internalState.contains(current))
 				internalState.push(current);
 	}
 

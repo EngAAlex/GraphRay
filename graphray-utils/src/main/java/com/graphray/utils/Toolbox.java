@@ -14,7 +14,7 @@ import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.AbstractComputation;
 import org.apache.giraph.graph.Vertex;
-import org.apache.log4j.Logger;
+//import org.apache.log4j.Logger;
 
 import com.graphray.common.edgetypes.PathfinderEdgeType;
 import com.graphray.common.vertextypes.PathfinderVertexID;
@@ -113,7 +113,7 @@ public class Toolbox {
 	
 	@SuppressWarnings("unchecked")
 	public static void armFragmentPathfinderCandidates(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, PathfinderVertexID edgesToActivate) throws IOException{
-		Iterator<PathfinderVertexID> edges = vertex.getValue().getRecipientsForFragment(edgesToActivate).iterator();
+		Iterator<PathfinderVertexID> edges = vertex.getValue().peekSetOutOfStack(edgesToActivate).iterator();
 		while(edges.hasNext()){
 			PathfinderVertexID current = edges.next();
 			if(vertex.getEdgeValue(current).getStatus() == PathfinderEdgeType.PATHFINDER_CANDIDATE){
@@ -191,6 +191,8 @@ public class Toolbox {
 	}
 
 	public static void updateEdgeValueWithStatus(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short newStatus, PathfinderVertexID recipient){
+		if(vertex.getEdgeValue(recipient).getStatus() == newStatus)
+			return;
 		PathfinderEdgeType pet = vertex.getEdgeValue(recipient);
 //		Logger.getLogger(Toolbox.class).info("Setting edge from " + vertex.getId() + " to " + recipient + " as " + PathfinderEdgeType.CODE_STRINGS[newStatus]);
 		vertex.setEdgeValue(recipient, new PathfinderEdgeType(pet.get(), newStatus));		
@@ -205,14 +207,26 @@ public class Toolbox {
 				//			vertex.setEdgeValue(recipient, pet);		
 			}
 	}
+	
+	public static void updateMultipleEdgeValueWithStatus(Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, short newStatus, Iterable<PathfinderVertexID> recipients, Collection<PathfinderVertexID> toExclude){
+		if(recipients != null)
+			for(PathfinderVertexID recipient : recipients){
+				if(!toExclude.contains(recipient))
+					updateEdgeValueWithStatus(vertex, newStatus, recipient);
+				//			PathfinderEdgeType pet = vertex.getEdgeValue(recipient).copy();
+				//			pet.setStatus(newStatus);
+				//			vertex.setEdgeValue(recipient, pet);		
+			}
+	}
 
 	@SuppressWarnings("rawtypes")
 	public static void updateRemoteEdgeWithStatus(AbstractComputation computation, PathfinderVertexID sourceID, PathfinderVertexID remoteID, PathfinderEdgeType existingEdge, short status) throws IOException{
 		computation.removeEdgesRequest(remoteID, sourceID);
-		PathfinderEdgeType newEdge = existingEdge.copy();
-		newEdge.setStatus(status);
+//		PathfinderEdgeType newEdge = existingEdge.copy();
+//		newEdge.setStatus(status);
+//		Logger.getLogger(Toolbox.class).info("Setting edge from " + remoteID + " to " + sourceID + " as " + PathfinderEdgeType.CODE_STRINGS[status]);
 		computation.addEdgeRequest(remoteID,
-				EdgeFactory.create(sourceID, newEdge));		
+				EdgeFactory.create(sourceID, new PathfinderEdgeType(existingEdge.get(), status)));		
 	}
 
 	public static void connectWithDummies(AbstractComputation computation, Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex, PathfinderVertexID fragmentToConnect) throws IOException{
@@ -265,5 +279,15 @@ public class Toolbox {
 			Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
 			SetWritable<PathfinderVertexID> recipients) {
 		updateMultipleEdgeValueWithStatus(vertex, PathfinderEdgeType.PATHFINDER, recipients);		
+	}
+	
+	/**
+	 * @param vertex
+	 * @param recipientsForFragment
+	 */
+	public static void setMultipleEdgesAsPathfinder(
+			Vertex<PathfinderVertexID, PathfinderVertexType, PathfinderEdgeType> vertex,
+			SetWritable<PathfinderVertexID> recipients, Collection<PathfinderVertexID> toExclude) {
+		updateMultipleEdgeValueWithStatus(vertex, PathfinderEdgeType.PATHFINDER, recipients, toExclude);		
 	}
 }

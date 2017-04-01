@@ -199,7 +199,7 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<SlimCo
 				for(Writable w : vertexValue.getActiveFragments()){
 					PathfinderVertexID pfid = (PathfinderVertexID) w;
 					log.info("Fragment " + pfid);
-					log.info("Elements " + ((SetWritable<PathfinderVertexID>)vertexValue.getRecipientsForFragment(pfid)).toString());
+					log.info("Elements " + ((SetWritable<PathfinderVertexID>)vertexValue.peekSetOutOfStack(pfid)).toString());
 
 				}
 
@@ -285,7 +285,7 @@ public abstract class LOEDiscoveryComputation extends GraphRayComputation<SlimCo
 						if(isLogEnabled)
 							log.info("sending local TEST connect message to fragment " + k);
 						sendMessageToMultipleEdges(							
-								((SetWritable<PathfinderVertexID>)vertexValue.getRecipientsForFragment(((PathfinderVertexID)k))).iterator(), 
+								((SetWritable<PathfinderVertexID>)vertexValue.peekSetOutOfStack(((PathfinderVertexID)k))).iterator(), 
 								new ControlledGHSMessage(vertexId, vertexValue.getFragmentIdentity(), minLOE, ControlledGHSMessage.CONNECT_TEST)); //CONNECT_MESSAGE
 						//					aggregate(MSTPathfinderMasterCompute.cGHSProcedureCompletedAggregator, new BooleanWritable(false));					
 					}
