@@ -24,6 +24,7 @@ public class PathfinderVertexType implements Writable{
 	protected boolean boruvkaStatus;
 	protected PathfinderVertexID fragmentIdentity;
 	protected double loeValue;
+	protected int howManyLoes;
 	protected double fragmentLoeValue;
 //	protected PathfinderVertexID oldFragmentID;
 	protected SetWritable<PathfinderVertexID> lastConnectedVertices;
@@ -46,11 +47,13 @@ public class PathfinderVertexType implements Writable{
 		isRoot = true;
 		boruvkaStatus = true;
 		loeValue = Double.MAX_VALUE;
+		howManyLoes = 0;
 		fragmentIdentity = new PathfinderVertexID();
 		loeDestinationFragments = new SetWritable<PathfinderVertexID>();		
 		loeAlternatives = new MapWritable();
 		acceptedConnections = new SetWritable<PathfinderVertexID>();
 		lastConnectedVertices = new SetWritable<PathfinderVertexID>();
+		howManyLoes = 0;
 //		oldFragmentID = new PathfinderVertexID();
 //		activeBoundary = new SetWritable<PathfinderVertexID>();
 	}	
@@ -83,6 +86,20 @@ public class PathfinderVertexType implements Writable{
 		this.loeValue = loe;
 	}
 
+	/**
+	 * @return the howManyLoes
+	 */
+	public int getHowManyLoes() {
+		return howManyLoes;
+	}
+
+	/**
+	 * @param howManyLoes the howManyLoes to set
+	 */
+	public void setHowManyLoes(int howManyLoes) {
+		this.howManyLoes = howManyLoes;
+	}
+
 	public void getReadyForNextRound(){
 		resetLOEStack();
 		lastConnectedVertices.clear();
@@ -93,6 +110,7 @@ public class PathfinderVertexType implements Writable{
 		setPingedByRoot(false);
 		branchConnection = false;
 //		fragmentLoeValue = Double.MAX_VALUE;
+		howManyLoes = 0;		
 		resetLOE();
 	}
 	/**
@@ -443,6 +461,7 @@ public class PathfinderVertexType implements Writable{
 //		oldFragmentID.readFields(in);
 		lastConnectedVertices.readFields(in);
 //		activeBoundary.readFields(in);
+		howManyLoes = in.readInt();
 	}
 
 	/* (non-Javadoc)
@@ -464,6 +483,7 @@ public class PathfinderVertexType implements Writable{
 //		oldFragmentID.write(out);
 		lastConnectedVertices.write(out);
 //		activeBoundary.write(out);
+		out.writeInt(howManyLoes);
 	}
 
 	/**
