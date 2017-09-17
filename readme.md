@@ -1,8 +1,16 @@
 # GraphRay
 
-GraphRay is a distributed algorithm to compute the Pathfinder network of a graph G with fixed parameters r = infinite and q = n-1. It is implemented on Giraph and requires Maven to compile.
+GraphRay is a distributed algorithm to compute the Pathfinder network of a graph G with fixed parameters r = infinite and q = n-1. It is implemented on Giraph and requires Maven to compile. It is described in [our paper](https://goo.gl/HG3DHf).
 
-Feel free to send questions and (hopefully) constructive criticism, in order to improve together this library.
+```
+@inproceedings{arleo17graphray,
+    title={{GraphRay: Distributed Pathfinder Network Scaling}},
+    author={Arleo, Alessio and Kwon, Oh-Hyun and Ma, Kwan-Liu},
+    booktitle={IEEE Symposium on Large Data Analysis and Visualization},
+    year={2017},  
+    note={To appear}
+}
+```
 
 # Usage
 
