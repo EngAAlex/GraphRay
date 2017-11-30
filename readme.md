@@ -7,8 +7,7 @@ GraphRay is a distributed algorithm to compute the Pathfinder network of a graph
     title={{GraphRay: Distributed Pathfinder Network Scaling}},
     author={Arleo, Alessio and Kwon, Oh-Hyun and Ma, Kwan-Liu},
     booktitle={IEEE Symposium on Large Data Analysis and Visualization},
-    year={2017},  
-    note={To appear}
+    year={2017}
 }
 ```
 
